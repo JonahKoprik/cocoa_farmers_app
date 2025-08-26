@@ -1,45 +1,101 @@
+import { useUserRole } from '@/hooks/useUserRole';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { Colors } from "../../constants/colors";
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+export default function TabsLayout() {
+    const { role, loading } = useUserRole();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+    if (loading) return null; // or a spinner if you prefer
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+    return (
+        <Tabs screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: Colors.actionPrimary,
+            tabBarInactiveTintColor: Colors.actionPrimary,
+        }}>
+            <Tabs.Screen
+                name="index"
+                options={{
+                    title: 'Home',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons
+                            name={focused ? 'home' : 'home-outline'}
+                            size={size}
+                            color={color}
+                        />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="farmingTips"
+                options={{
+                    title: 'Farming Tips',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons
+                            name={focused ? 'leaf' : 'leaf-outline'}
+                            size={size}
+                            color={color}
+                        />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="fermentaryPrice"
+                options={{
+                    title: 'Prices',
+                    tabBarIcon: ({ focused, color, size }) => <Ionicons
+                        name={focused ? "pricetag" : "pricetag-outline"}
+                        size={size}
+                        color={color}
+                    />,
+                }}
+            />
+            <Tabs.Screen
+                name="posts"
+                options={{
+                    title: 'Post',
+                    tabBarIcon: ({ focused, color, size }) => <Ionicons
+                        name={focused ? "add-circle" : "add-circle-outline"}
+                        size={size}
+                        color={color}
+                    />,
+                }}
+            />
+
+            {/* 
+            {(role === 'farmer' || role === 'fermentary') && (
+                
+            )} */}
+
+            {/* {(role === 'warehouse' || role === 'organization') && (
+                
+            )} */}
+
+
+
+
+            <Tabs.Screen
+                name="newsFeeds"
+                options={{
+                    title: 'News',
+                    tabBarIcon: ({ focused, color, size }) => <Ionicons name={focused ? "newspaper" : "newspaper-outline"}
+                        size={size}
+                        color={color} />,
+                }}
+            />
+
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Profile',
+                    tabBarIcon: ({ focused, color, size }) =>
+                        <Ionicons
+                            name={focused ? "person-circle" : "person-circle-outline"}
+                            size={size}
+                            color={color} />,
+                }}
+            />
+        </Tabs>
+    );
 }
