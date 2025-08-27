@@ -2,40 +2,20 @@ import { Colors } from '@/constants/colors';
 import { useUser } from '@/context/UserContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
 import {
     Alert,
     Button,
-    Image,
     StyleSheet,
-    Text,
     TextInput,
-    TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 export default function ProfileScreen() {
     const { user, logout } = useUser();
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
-    const [imageUri, setImageUri] = useState<string | null>(null);
-
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images, // or .Videos or .All
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-
-        if (!result.canceled && result.assets.length > 0) {
-            setImageUri(result.assets[0].uri);
-            // TODO: Upload image to Supabase storage and update profile `avatar_url`
-        }
-    };
 
     const handleSave = async () => {
         if (!user?.id || !user.email) return;
@@ -56,6 +36,7 @@ export default function ProfileScreen() {
                 email: user.email,
                 full_name: name,
                 role,
+                created_at: existingProfile ? undefined : new Date().toISOString(), // ✅ only set if new
             };
 
             const { error: upsertError } = await supabase
@@ -77,15 +58,6 @@ export default function ProfileScreen() {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity onPress={pickImage}>
-                {imageUri ? (
-                    <Image source={{ uri: imageUri }} style={styles.avatar} />
-                ) : (
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>Upload Photo</Text>
-                    </View>
-                )}
-            </TouchableOpacity>
 
             <TextInput
                 style={styles.input}

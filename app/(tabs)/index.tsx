@@ -10,10 +10,14 @@ import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
 import { useRecentPosts } from '../../hooks/useRecentPosts';
+
+
+// HOME SCREEN - COMBINES PRICES, TIPS, AND RECENT POSTS
 export default function MarketPricesScreen() {
     const { localPrices, globalPrices } = usePrices();
     const { tips } = useFarmingTips();
     const { posts } = useRecentPosts();
+
 
     const priceCards: PriceCard[] = [
         {
@@ -98,9 +102,9 @@ export default function MarketPricesScreen() {
                         <Text style={styles.emptyText}>No recent activity yet. Be the first to post!</Text>
                     ) : (
                         posts.map((post: ActivityPost, index) => (
-                            <GradientCard key={`recent-post-${index}`} colors={['#e8e0ddff', '#e8e0ddff']}>
+                            <View key={`recent-post-${index}`} style={{ marginBottom: 12 }}>
                                 <PostCard post={post} currentUserId="JK" />
-                            </GradientCard>
+                            </View>
                         ))
                     )}
                 </View>

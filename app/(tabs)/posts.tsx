@@ -20,8 +20,8 @@ export default function PostsScreen() {
 
     const fetchPosts = async () => {
         const { data, error } = await supabase
-            .from('activity_posts')
-            .select('post_id, author_name, author_role, content, timestamp, liked_by')
+            .from('activity_posts_with_author')
+            .select('*')
             .order('timestamp', { ascending: false });
 
         if (error) {
@@ -54,10 +54,10 @@ export default function PostsScreen() {
         }
 
         try {
-            await createPost({ content: trimmed }); // RLS handles author fields
+            await createPost({ content: trimmed }); // Only content is inserted
             Alert.alert('Success', 'Post created!');
             setContent('');
-            fetchPosts(); // Refresh posts after creation
+            fetchPosts(); // Refresh posts
         } catch (error) {
             const message =
                 error instanceof Error
