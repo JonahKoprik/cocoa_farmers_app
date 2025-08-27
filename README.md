@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Cocoa Farmers App 🌱
 
 A participatory dashboard for cocoa farmers, designed to empower stakeholders through modular architecture, semantic design, and teachable onboarding.
@@ -15,3 +16,7 @@ git clone https://github.com/JonahKoprik/cocoa_farmers_app.git
 cd cocoa_farmers_app
 npm install
 npm run dev
+=======
+# cocoa_farmers_app
+Final Year Project
+>>>>>>> 6bc78e19c99888df115143cce7d733b8c5193bbc
