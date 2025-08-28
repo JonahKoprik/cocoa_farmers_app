@@ -69,7 +69,7 @@ export default function NewsFeedScreen() {
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
             {/* 🟤 Coresoul Section */}
-            <Text style={styles.sectionTitle}>Success Stories</Text>
+            <Text style={styles.sectionTitle}>Global New</Text>
             <FlatList
                 data={articles}
                 keyExtractor={(item, index) => index.toString()}
@@ -93,7 +93,7 @@ export default function NewsFeedScreen() {
             />
 
             {/*Recent Activities Section */}
-            <Text style={styles.sectionTitle}>Latest News</Text>
+            <Text style={styles.sectionTitle}>Local News</Text>
             <View style={styles.verticalList}>
                 {articles.map((item, index) => (
                     <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
