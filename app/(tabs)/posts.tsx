@@ -8,11 +8,6 @@ import { ActivityPost } from '../../components/types/activityPost';
 import { createPost } from '../../lib/createPost';
 import { supabase } from '../../lib/supabaseClient';
 
-const VALID_ROLES: ActivityPost['author']['role'][] = ['farmer', 'exporter', 'organization'];
-
-const isValidRole = (role: string): role is ActivityPost['author']['role'] =>
-    VALID_ROLES.includes(role as ActivityPost['author']['role']);
-
 export default function PostsScreen() {
     const [content, setContent] = useState('');
     const [posts, setPosts] = useState<ActivityPost[]>([]);
@@ -50,11 +45,7 @@ export default function PostsScreen() {
             userId: row.user_id,
             author: {
                 name: row.author_name ?? 'Unknown',
-<<<<<<< HEAD
-                role: isValidRole(row.author_role) ? row.author_role : 'farmer',
-=======
                 role: row.author_role?.trim() || 'Unknown',
->>>>>>> feature/role-views
             },
         }));
 
@@ -70,11 +61,6 @@ export default function PostsScreen() {
         }
 
         try {
-<<<<<<< HEAD
-            await createPost({ content: trimmed });
-            Alert.alert('Success', 'Post created!');
-            setContent('');
-=======
             if (editingPostId) {
                 const { error } = await supabase
                     .from('activity_posts')
@@ -92,7 +78,6 @@ export default function PostsScreen() {
 
             setContent('');
             setEditingPostId(null);
->>>>>>> feature/role-views
             fetchPosts();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unexpected error occurred.';
@@ -141,8 +126,6 @@ export default function PostsScreen() {
         init();
     }, []);
 
-<<<<<<< HEAD
-=======
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -151,7 +134,6 @@ export default function PostsScreen() {
         );
     }
 
->>>>>>> feature/role-views
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <View style={styles.container}>
