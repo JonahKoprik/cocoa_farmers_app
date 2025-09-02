@@ -8,11 +8,6 @@ import { ActivityPost } from '../../components/types/activityPost';
 import { createPost } from '../../lib/createPost';
 import { supabase } from '../../lib/supabaseClient';
 
-const VALID_ROLES: ActivityPost['author']['role'][] = ['farmer', 'exporter', 'organization'];
-
-const isValidRole = (role: string): role is ActivityPost['author']['role'] =>
-    VALID_ROLES.includes(role as ActivityPost['author']['role']);
-
 export default function PostsScreen() {
     const [content, setContent] = useState('');
     const [posts, setPosts] = useState<ActivityPost[]>([]);
@@ -66,10 +61,13 @@ export default function PostsScreen() {
         }
 
         try {
+<<<<<<< HEAD
 
             await createPost({ content: trimmed });
             Alert.alert('Success', 'Post created!');
             setContent('');
+=======
+>>>>>>> feature/post-features
             if (editingPostId) {
                 const { error } = await supabase
                     .from('activity_posts')
@@ -87,7 +85,10 @@ export default function PostsScreen() {
 
             setContent('');
             setEditingPostId(null);
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/post-features
             fetchPosts();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unexpected error occurred.';
