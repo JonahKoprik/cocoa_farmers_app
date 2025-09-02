@@ -14,6 +14,11 @@ import { ActivityPost } from '../../components/types/activityPost';
 import { createPost } from '../../lib/createPost';
 import { supabase } from '../../lib/supabaseClient';
 
+const VALID_ROLES: ActivityPost['author']['role'][] = ['farmer', 'exporter', 'organization'];
+
+const isValidRole = (role: string): role is ActivityPost['author']['role'] =>
+    VALID_ROLES.includes(role as ActivityPost['author']['role']);
+
 export default function PostsScreen() {
     const [content, setContent] = useState('');
     const [posts, setPosts] = useState<ActivityPost[]>([]);
@@ -37,9 +42,7 @@ export default function PostsScreen() {
             likes: Array.isArray(row.liked_by) ? row.liked_by.length : 0,
             author: {
                 name: row.author_name ?? 'Unknown',
-                role: (['farmer', 'exporter', 'organization'].includes(row.author_role)
-                    ? row.author_role
-                    : 'farmer') as ActivityPost['author']['role'],
+                role: isValidRole(row.author_role) ? row.author_role : 'farmer',
             },
         }));
 
@@ -54,10 +57,10 @@ export default function PostsScreen() {
         }
 
         try {
-            await createPost({ content: trimmed }); // Only content is inserted
+            await createPost({ content: trimmed });
             Alert.alert('Success', 'Post created!');
             setContent('');
-            fetchPosts(); // Refresh posts
+            fetchPosts();
         } catch (error) {
             const message =
                 error instanceof Error
@@ -72,7 +75,6 @@ export default function PostsScreen() {
         fetchPosts();
     }, []);
 
-    // 
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <View style={styles.container}>
