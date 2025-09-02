@@ -1,14 +1,8 @@
 import { Colors } from '@/constants/colors';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Button,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+    Alert, Button, FlatList, SafeAreaView, StyleSheet,
+    Text, TextInput, View,
 } from 'react-native';
 import { ActivityPost } from '../../components/types/activityPost';
 import { createPost } from '../../lib/createPost';
@@ -37,10 +31,11 @@ export default function PostsScreen() {
             likes: Array.isArray(row.liked_by) ? row.liked_by.length : 0,
             author: {
                 name: row.author_name ?? 'Unknown',
-                role: (['farmer', 'exporter', 'organization'].includes(row.author_role)
+                role: typeof row.author_role === 'string' && row.author_role.trim() !== ''
                     ? row.author_role
-                    : 'farmer') as ActivityPost['author']['role'],
+                    : 'Unknown',
             },
+
         }));
 
         setPosts(transformed);
