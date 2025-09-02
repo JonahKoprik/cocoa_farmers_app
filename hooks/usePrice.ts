@@ -1,11 +1,7 @@
 // hooks/useCocoaPrice.ts
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 
-const supabase = createClient(
-  'https://tuxlvyfredtuknhsqdtj.supabase.co',
-  '<your-anon-key>'
-)
 
 // hooks/useCocoaPrice.ts
 export const usePrices = () => {

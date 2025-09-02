@@ -68,7 +68,7 @@ export default function NewsFeedScreen() {
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-            {/* 🟤 Coresoul Section */}
+            {/* Coresoul Section */}
             <Text style={styles.sectionTitle}>Global New</Text>
             <FlatList
                 data={articles}

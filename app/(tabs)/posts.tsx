@@ -72,6 +72,7 @@ export default function PostsScreen() {
         fetchPosts();
     }, []);
 
+    // 
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <View style={styles.container}>
