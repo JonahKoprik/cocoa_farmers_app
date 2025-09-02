@@ -61,13 +61,6 @@ export default function PostsScreen() {
         }
 
         try {
-<<<<<<< HEAD
-
-            await createPost({ content: trimmed });
-            Alert.alert('Success', 'Post created!');
-            setContent('');
-=======
->>>>>>> feature/post-features
             if (editingPostId) {
                 const { error } = await supabase
                     .from('activity_posts')
@@ -85,10 +78,6 @@ export default function PostsScreen() {
 
             setContent('');
             setEditingPostId(null);
-<<<<<<< HEAD
-
-=======
->>>>>>> feature/post-features
             fetchPosts();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unexpected error occurred.';
