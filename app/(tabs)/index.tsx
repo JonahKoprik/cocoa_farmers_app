@@ -1,11 +1,8 @@
 import { HeaderBar } from '@/components/HeaderBar';
-import { FlatList, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
 import { GradientCard } from "../../components/GradientCard";
-import { PostCard } from '../../components/PostCard';
-import { PriceRow } from '../../components/PriceRow';
 import { TipCard } from '../../components/TipCard';
 import { PriceCard } from "../../components/types/PriceCard";
-import { ActivityPost } from "../../components/types/activityPost";
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
@@ -83,31 +80,8 @@ export default function MarketPricesScreen() {
                 />
 
                 {/* 🔷 Recent Activities */}
-                <Text style={styles.sectionTitle}>🕓 Recent Posts</Text>
-                <View style={styles.detailSection}>
-                    <PriceRow label="Local Dry Bean Price" value={localPrices.dry} />
-                    <PriceRow label="Global Cocoa Price" value={globalPrices.global} currency="USD" />
+                <Text style={styles.sectionTitle}>Recent Posts</Text>
 
-                    {recentTips.length === 0 ? (
-                        <Text style={styles.emptyText}>No recent tips available.</Text>
-                    ) : (
-                        recentTips.map((tip, index) => (
-                            <GradientCard key={`recent-tip-${index}`} colors={['#e8e0ddff', '#e8e0ddff']}>
-                                <TipCard title={tip.title} content={tip.content} />
-                            </GradientCard>
-                        ))
-                    )}
-
-                    {posts.length === 0 ? (
-                        <Text style={styles.emptyText}>No recent activity yet. Be the first to post!</Text>
-                    ) : (
-                        posts.map((post: ActivityPost, index) => (
-                            <View key={`recent-post-${index}`} style={{ marginBottom: 12 }}>
-                                <PostCard post={post} currentUserId="JK" />
-                            </View>
-                        ))
-                    )}
-                </View>
             </ScrollView>
         </SafeAreaView>
     );
