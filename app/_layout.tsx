@@ -6,6 +6,7 @@ import { Slot } from 'expo-router';
 
 export default function AppLayout() {
     return (
+        // User Priovider to manage user state across the app
         <UserProvider>
             <Slot />
         </UserProvider>

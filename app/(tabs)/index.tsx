@@ -80,7 +80,7 @@ export default function MarketPricesScreen() {
                 />
 
                 {/* 🔷 Recent Activities */}
-                <Text style={styles.sectionTitle}>Recent Posts</Text>
+                <Text style={styles.sectionTitle}>Graphs</Text>
 
             </ScrollView>
         </SafeAreaView>

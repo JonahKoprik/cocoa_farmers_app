@@ -17,6 +17,7 @@ export interface UserContextType {
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
 
+// Provider component to wrap the app and provide user state
 export function UserProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
