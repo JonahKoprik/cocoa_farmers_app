@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NewsArticle = {
     title: string;
@@ -67,45 +68,47 @@ export default function NewsFeedScreen() {
     }, []);
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-            {/* Coresoul Section */}
-            <Text style={styles.sectionTitle}>Global New</Text>
-            <FlatList
-                data={articles}
-                keyExtractor={(item, index) => index.toString()}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-                renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => Linking.openURL(item.url)}>
-                        <LinearGradient
-                            colors={['#ded6cbff', '#ded6cbff', '#ded6cbff'] as const}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.card}
-                        >
-                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                            <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
-                            <Text style={styles.link}>View More</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-            />
+        <SafeAreaView style={styles.container}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+                {/* Coresoul Section */}
+                <Text style={styles.sectionTitle}>Global New</Text>
+                <FlatList
+                    data={articles}
+                    keyExtractor={(item, index) => index.toString()}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalList}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity onPress={() => Linking.openURL(item.url)}>
+                            <LinearGradient
+                                colors={['#ded6cbff', '#ded6cbff', '#ded6cbff'] as const}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.card}
+                            >
+                                <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
+                                <Text style={styles.link}>View More</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+                />
 
-            {/*Recent Activities Section */}
-            <Text style={styles.sectionTitle}>Local News</Text>
-            <View style={styles.verticalList}>
-                {articles.map((item, index) => (
-                    <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
-                        <View style={styles.verticalCard}>
-                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                            <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
-                            <Text style={styles.link}>View More</Text>
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
-        </ScrollView>
+                {/*Recent Activities Section */}
+                <Text style={styles.sectionTitle}>Local News</Text>
+                <View style={styles.verticalList}>
+                    {articles.map((item, index) => (
+                        <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
+                            <View style={styles.verticalCard}>
+                                <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
+                                <Text style={styles.link}>View More</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 

@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/colors';
 import { useState } from 'react';
 import { FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { TipCard } from '../../components/TipCard';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 
@@ -57,65 +58,67 @@ export default function FarmingTipsScreen() {
     );
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            {renderToggle()}
+        <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.container}>
+                {renderToggle()}
 
-            {activeCategory === 'tips' && (
-                <>
-                    {fermentationTips.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.heading}>Fermentation Best Practices</Text>
-                            <FlatList
-                                horizontal
-                                data={fermentationTips}
-                                keyExtractor={(item, index) => index.toString()}
-                                renderItem={({ item }) => (
-                                    <View style={styles.card}>
-                                        <TipCard title={item.title} content={item.content} />
-                                    </View>
-                                )}
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={styles.horizontalList}
-                            />
+                {activeCategory === 'tips' && (
+                    <>
+                        {fermentationTips.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.heading}>Fermentation Best Practices</Text>
+                                <FlatList
+                                    horizontal
+                                    data={fermentationTips}
+                                    keyExtractor={(item, index) => index.toString()}
+                                    renderItem={({ item }) => (
+                                        <View style={styles.card}>
+                                            <TipCard title={item.title} content={item.content} />
+                                        </View>
+                                    )}
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.horizontalList}
+                                />
+                            </View>
+                        )}
+                        <Text style={styles.heading}>All Farming Tips</Text>
+                        <View style={styles.verticalList}>
+                            {tips.map((tip, index) => (
+                                <View key={index} style={styles.card}>
+                                    <TipCard title={tip.title} content={tip.content} />
+                                </View>
+                            ))}
                         </View>
-                    )}
-                    <Text style={styles.heading}>All Farming Tips</Text>
-                    <View style={styles.verticalList}>
-                        {tips.map((tip, index) => (
-                            <View key={index} style={styles.card}>
-                                <TipCard title={tip.title} content={tip.content} />
-                            </View>
-                        ))}
-                    </View>
-                </>
-            )}
+                    </>
+                )}
 
-            {activeCategory === 'videos' && (
-                <>
-                    <Text style={styles.heading}>Cocoa Farming Videos</Text>
-                    <View style={styles.verticalList}>
-                        {videoResources.map((video, index) => (
-                            <View key={index} style={styles.card}>
-                                {renderLink(video)}
-                            </View>
-                        ))}
-                    </View>
-                </>
-            )}
+                {activeCategory === 'videos' && (
+                    <>
+                        <Text style={styles.heading}>Cocoa Farming Videos</Text>
+                        <View style={styles.verticalList}>
+                            {videoResources.map((video, index) => (
+                                <View key={index} style={styles.card}>
+                                    {renderLink(video)}
+                                </View>
+                            ))}
+                        </View>
+                    </>
+                )}
 
-            {activeCategory === 'documents' && (
-                <>
-                    <Text style={styles.heading}>Cocoa Farming Documents</Text>
-                    <View style={styles.verticalList}>
-                        {documentResources.map((doc, index) => (
-                            <View key={index} style={styles.card}>
-                                {renderLink(doc)}
-                            </View>
-                        ))}
-                    </View>
-                </>
-            )}
-        </ScrollView>
+                {activeCategory === 'documents' && (
+                    <>
+                        <Text style={styles.heading}>Cocoa Farming Documents</Text>
+                        <View style={styles.verticalList}>
+                            {documentResources.map((doc, index) => (
+                                <View key={index} style={styles.card}>
+                                    {renderLink(doc)}
+                                </View>
+                            ))}
+                        </View>
+                    </>
+                )}
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 

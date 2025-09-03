@@ -30,7 +30,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="farmingTips"
                 options={{
-                    title: 'Farming Tips',
+                    title: 'Tips',
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons
                             name={focused ? 'leaf' : 'leaf-outline'}

@@ -1,9 +1,10 @@
 import { Colors } from '@/constants/colors';
 import { useEffect, useState } from 'react';
 import {
-    Alert, Button, FlatList, SafeAreaView, StyleSheet,
+    Alert, Button, FlatList, StyleSheet,
     Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityPost } from '../../components/types/activityPost';
 import { createPost } from '../../lib/createPost';
 import { supabase } from '../../lib/supabaseClient';
@@ -21,8 +22,8 @@ export default function PostsScreen() {
             console.error('Error fetching user:', error?.message);
             return;
         }
-        console.log('🔐 Authenticated user ID:', user.id);
-        setCurrentUserId(user.id);
+        // console.log('🔐 Authenticated user ID:', user.id);
+        // setCurrentUserId(user.id);
     };
 
     const fetchPosts = async () => {
@@ -86,6 +87,11 @@ export default function PostsScreen() {
         }
     };
 
+    /**
+     * 
+     * This function handles the deletion of a post.
+     * It prompts the user for confirmation and deletes the post if confirmed. The ID of the post to delete.
+     */
     const handleDelete = async (postId: string) => {
         Alert.alert('Delete Post', 'Are you sure?', [
             { text: 'Cancel', style: 'cancel' },
@@ -110,6 +116,7 @@ export default function PostsScreen() {
         ]);
     };
 
+    // Function to handle editing a post
     const handleEdit = (postId: string) => {
         const post = posts.find((p) => p.id === postId);
         if (post) {
@@ -135,7 +142,7 @@ export default function PostsScreen() {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.backgroundPrimary }}>
             <View style={styles.container}>
                 <TextInput
                     value={content}

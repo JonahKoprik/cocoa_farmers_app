@@ -13,7 +13,6 @@ type Fermentary = {
   llg_name: string;
 };
 
-
 export function useFermentaries(llgName: string) {
   const [data, setData] = useState<Fermentary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +29,32 @@ export function useFermentaries(llgName: string) {
     setLoading(true);
 
     try {
+      // Step 1: Resolve llg_id from llg_name
+      const { data: llgData, error: llgError } = await supabase
+        .from("llg")
+        .select("llg_id")
+        .eq("llg_name", trimmedLLG)
+        .single();
+
+      if (llgError || !llgData) {
+        throw new Error("LLG not found");
+      }
+
+      const llgId = llgData.llg_id;
+
+      // Step 2: Get all ward_ids for that llg_id
+      const { data: wardData, error: wardError } = await supabase
+        .from("ward")
+        .select("ward_id")
+        .eq("llg_id", llgId);
+
+      if (wardError || !wardData || wardData.length === 0) {
+        throw new Error("No wards found for this LLG");
+      }
+
+      const wardIds = wardData.map(w => w.ward_id);
+
+      // Step 3: Fetch fermentaries in those wards
       const { data: fermentaries, error: fermentaryError } = await supabase
         .from("fermentary")
         .select(`
@@ -49,7 +74,7 @@ export function useFermentaries(llgName: string) {
             full_name
           )
         `)
-        .ilike("ward.llg.llg_name", trimmedLLG);
+        .in("ward_id", wardIds);
 
       if (fermentaryError) throw fermentaryError;
 
@@ -60,7 +85,7 @@ export function useFermentaries(llgName: string) {
         ward_id: f.ward?.ward_id ?? "",
         ward_name: f.ward?.ward_name ?? "",
         contact: f.contact ?? "",
-        price_per_kg: f.price_per_kg || "NULL",
+        price_per_kg: typeof f.price_per_kg === "number" ? f.price_per_kg : 0,
         updated_at: f.updated_at ?? "",
         llg_name: f.ward?.llg?.llg_name ?? "",
       }));
@@ -68,7 +93,7 @@ export function useFermentaries(llgName: string) {
       setData(flattened);
       setError(null);
     } catch (err: any) {
-      setError(typeof err === "object" && err.message ? err.message : "Failed to fetch fermentaries");
+      setError(err.message || "Failed to fetch fermentaries");
       setData([]);
     } finally {
       setLoading(false);

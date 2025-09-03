@@ -1,5 +1,6 @@
 import { HeaderBar } from '@/components/HeaderBar';
-import { FlatList, SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientCard } from "../../components/GradientCard";
 import { TipCard } from '../../components/TipCard';
 import { PriceCard } from "../../components/types/PriceCard";
