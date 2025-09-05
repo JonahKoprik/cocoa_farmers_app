@@ -1,4 +1,5 @@
 import { HeaderBar } from '@/components/HeaderBar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FlatList, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientCard } from "../../components/GradientCard";
@@ -7,14 +8,14 @@ import { PriceCard } from "../../components/types/PriceCard";
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
-import { useRecentPosts } from '../../hooks/useRecentPosts';
+
 
 
 // HOME SCREEN - COMBINES PRICES, TIPS, AND RECENT POSTS
 export default function MarketPricesScreen() {
     const { localPrices, globalPrices } = usePrices();
     const { tips } = useFarmingTips();
-    const { posts } = useRecentPosts();
+
 
 
     const priceCards: PriceCard[] = [
@@ -39,52 +40,54 @@ export default function MarketPricesScreen() {
     ];
 
     const recommendedTips = tips.slice(0, 5);
-    const recentTips = tips.slice(5, 10);
+
 
     return (
-        <SafeAreaView style={styles.container}>
-            <HeaderBar userName="JK" />
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* 🟢 Market Prices */}
-                <Text style={styles.sectionTitle}>Market Prices</Text>
-                <FlatList
-                    horizontal
-                    data={priceCards}
-                    keyExtractor={(item) => item.label}
-                    renderItem={({ item }) => (
-                        <GradientCard colors={item.gradient}>
-                            <Text style={styles.title}>{item.label}</Text>
-                            <Text style={styles.price}>
-                                {typeof item.value === 'number'
-                                    ? `${item.value.toFixed(2)} ${item.currency}`
-                                    : 'Unavailable'}
-                            </Text>
-                        </GradientCard>
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalList}
-                />
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                <HeaderBar userName="JK" />
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    {/* 🟢 Market Prices */}
+                    <Text style={styles.sectionTitle}>Market Prices</Text>
+                    <FlatList
+                        horizontal
+                        data={priceCards}
+                        keyExtractor={(item) => item.label}
+                        renderItem={({ item }) => (
+                            <GradientCard colors={item.gradient}>
+                                <Text style={styles.title}>{item.label}</Text>
+                                <Text style={styles.price}>
+                                    {typeof item.value === 'number'
+                                        ? `${item.value.toFixed(2)} ${item.currency}`
+                                        : 'Unavailable'}
+                                </Text>
+                            </GradientCard>
+                        )}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.horizontalList}
+                    />
 
-                {/* 🟡 Recommended Tips */}
-                <Text style={styles.sectionTitle}>🌿 Recommended Tips</Text>
-                <FlatList
-                    horizontal
-                    data={recommendedTips}
-                    keyExtractor={(_, index) => `tip-${index}`}
-                    renderItem={({ item }) => (
-                        <GradientCard colors={['#cfbdb7ff', '#A1887F']}>
-                            <TipCard title={item.title} content={item.content} />
-                        </GradientCard>
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalList}
-                />
+                    {/* 🟡 Recommended Tips */}
+                    <Text style={styles.sectionTitle}>🌿 Recommended Tips</Text>
+                    <FlatList
+                        horizontal
+                        data={recommendedTips}
+                        keyExtractor={(_, index) => `tip-${index}`}
+                        renderItem={({ item }) => (
+                            <GradientCard colors={['#cfbdb7ff', '#A1887F']}>
+                                <TipCard title={item.title} content={item.content} />
+                            </GradientCard>
+                        )}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.horizontalList}
+                    />
 
-                {/* 🔷 Recent Activities */}
-                <Text style={styles.sectionTitle}>Graphs</Text>
+                    {/* 🔷 Recent Activities */}
+                    <Text style={styles.sectionTitle}>Graphs</Text>
 
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 

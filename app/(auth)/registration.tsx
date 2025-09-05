@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -40,7 +41,7 @@ const Registration = () => {
                     Alert.alert('Signup Successful', `Welcome, ${data.user.email}`);
                 }
 
-                router.push('/(tabs)'); // Redirect to your app home
+                router.push('/(onboarding)/gettingStarted'); // Redirect to your app home
             } else {
                 Alert.alert('Signup Successful', 'Please check your email to verify your account.');
             }
@@ -51,43 +52,45 @@ const Registration = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.loginCard}>
-                <Text style={styles.title}>Sign Up</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Confirm Password"
-                    secureTextEntry
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                />
-                <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-                    <Text style={styles.buttonText}>Register</Text>
-                </TouchableOpacity>
-                <Text style={styles.footerText}>
-                    Already have an account?{' '}
-                    <Link href="./login" style={styles.link}>
-                        Sign In
-                    </Link>
-                </Text>
-                <Text style={styles.footerText}>Forgot Password?</Text>
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <View style={styles.container}>
+                <View style={styles.loginCard}>
+                    <Text style={styles.title}>Sign Up</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email"
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        secureTextEntry
+                        value={password}
+                        onChangeText={setPassword}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Confirm Password"
+                        secureTextEntry
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                    />
+                    <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+                        <Text style={styles.buttonText}>Register</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.footerText}>
+                        Already have an account?{' '}
+                        <Link href="./login" style={styles.link}>
+                            Sign In
+                        </Link>
+                    </Text>
+                    <Text style={styles.footerText}>Forgot Password?</Text>
+                </View>
             </View>
-        </View>
+        </LinearGradient>
     );
 };
 
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'hsl(200,90%, 5%)',
+
     },
     title: {
         fontSize: 24,

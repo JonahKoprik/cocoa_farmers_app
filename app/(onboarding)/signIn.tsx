@@ -56,35 +56,9 @@ const Login = () => {
                 } else {
                     Alert.alert('Login Failed', error.message);
                 }
-                return;
-            }
-
-            const user = data?.user;
-            if (!user) {
-                Alert.alert('Error', 'No user session found');
-                return;
-            }
-
-            // 🔍 Check if user exists in user_profile table
-            const { data: profile, error: profileError } = await supabase
-                .from('user_profile')
-                .select('id')
-                .eq('email', user.email)
-                .single();
-
-            if (profileError && profileError.code !== 'PGRST116') {
-                // PGRST116 = No rows found
-                console.error(profileError);
-                Alert.alert('Error', 'Failed to check user profile');
-                return;
-            }
-
-            if (profile) {
-                // ✅ Existing user — route to main tab
-                router.replace('/(tabs)');
-            } else {
-                // 🆕 New user — route to onboarding
-                router.replace('/(onboarding)/gettingStarted');
+            } else if (data.session) {
+                Alert.alert('Login Successful');
+                router.replace('/');
             }
         } catch (err) {
             Alert.alert('Error', 'An unexpected error occurred');
@@ -93,7 +67,6 @@ const Login = () => {
             setLoading(false);
         }
     };
-
 
     return (
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
@@ -133,7 +106,7 @@ const Login = () => {
 
                         <Text style={styles.footerText}>
                             Don't have an account?{' '}
-                            <Link href="/(auth)/registration" style={styles.link}>Register</Link>
+                            <Link href="/(onboarding)/registration/profile" style={styles.link}>Register</Link>
                         </Text>
 
                         <Text style={styles.footerText}>Forgot Password?</Text>

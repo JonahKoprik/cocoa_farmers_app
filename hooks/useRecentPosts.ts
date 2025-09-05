@@ -1,3 +1,4 @@
+// hooks/useRecentPosts.ts
 import { useEffect, useState } from 'react';
 import { ActivityPost } from '../components/types/activityPost';
 import { supabase } from '../lib/supabaseClient';
