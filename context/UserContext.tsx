@@ -1,5 +1,6 @@
 // src/context/UserContext.tsx
 import { supabase } from '@/lib/supabaseClient';
+import { router } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface User {
@@ -17,12 +18,13 @@ export interface UserContextType {
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Provider component to wrap the app and provide user state
 export function UserProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
+        let subscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'];
+
         const getSessionAndListen = async () => {
             const { data: { session } } = await supabase.auth.getSession();
 
@@ -35,6 +37,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             } else {
                 setUser(null);
             }
+
             setAuthLoading(false);
 
             const { data } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -49,16 +52,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 }
             });
 
-            return () => {
-                data.subscription.unsubscribe();  // <-- here
-            };
+            subscription = data.subscription;
         };
 
         getSessionAndListen();
+
+        return () => {
+            subscription?.unsubscribe();
+        };
     }, []);
 
-
-    // Login function
     const login = async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -73,10 +76,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    // Logout function
     const logout = async () => {
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Logout error:', error.message);
+            return;
+        }
+
         setUser(null);
+        router.replace('/(auth)/login'); // Adjust route if needed
     };
 
     return (

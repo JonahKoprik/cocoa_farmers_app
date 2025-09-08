@@ -1,39 +1,74 @@
-import { HeaderBar } from '@/components/HeaderBar';
+import { useUser } from '@/context/UserContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FlatList, ScrollView, StyleSheet, Text } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GradientCard } from "../../components/GradientCard";
+import { GradientCard } from '../../components/GradientCard';
 import { TipCard } from '../../components/TipCard';
-import { PriceCard } from "../../components/types/PriceCard";
+import { PriceCard } from '../../components/types/PriceCard';
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
+import { supabase } from '../../lib/supabaseClient';
 
-
-
-// HOME SCREEN - COMBINES PRICES, TIPS, AND RECENT POSTS
 export default function MarketPricesScreen() {
-    const { localPrices, globalPrices } = usePrices();
+    const { globalPrices, loading, error } = usePrices();
     const { tips } = useFarmingTips();
+    const { user } = useUser();
 
+    const [farmerCount, setFarmerCount] = useState(0);
+    const [fermentaryCount, setFermentaryCount] = useState(0);
+    const [warehouseCount, setWarehouseCount] = useState(0);
 
+    useEffect(() => {
+        const fetchCounts = async () => {
+            if (!user?.email) return;
+
+            const { data: profile } = await supabase
+                .from('user_profile')
+                .select('province_id')
+                .eq('email', user.email)
+                .single();
+
+            const provinceId = profile?.province_id;
+            if (!provinceId) return;
+
+            const [{ count: farmers }, { count: fermentaries }, { count: warehouses }] = await Promise.all([
+                supabase
+                    .from('user_profile')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('role', 'Farmer')
+                    .eq('province_id', provinceId),
+
+                supabase
+                    .from('fermentary')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('province_id', provinceId),
+
+                supabase
+                    .from('warehouse')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('province_id', provinceId),
+            ]);
+
+            setFarmerCount(farmers ?? 0);
+            setFermentaryCount(fermentaries ?? 0);
+            setWarehouseCount(warehouses ?? 0);
+        };
+
+        fetchCounts();
+    }, [user?.email]);
 
     const priceCards: PriceCard[] = [
         {
-            label: 'Wet Bean Price',
-            value: typeof localPrices?.wet === 'number' ? localPrices.wet : null,
-            gradient: ['#D2B48C', '#D2B48C', '#D2B48C'],
-            currency: 'PGK/kg',
-        },
-        {
-            label: 'Dry Bean Price',
-            value: typeof localPrices?.dry === 'number' ? localPrices.dry : null,
-            gradient: ['#D2B48C', '#D2B48C', '#D2B48C'],
-            currency: 'PGK/kg',
-        },
-        {
             label: 'Global Cocoa Price',
-            value: typeof globalPrices?.global === 'number' ? globalPrices.global : null,
+            value: globalPrices.global,
             gradient: ['#D2B48C', '#D2B48C', '#D2B48C'],
             currency: 'USD/ton',
         },
@@ -41,50 +76,76 @@ export default function MarketPricesScreen() {
 
     const recommendedTips = tips.slice(0, 5);
 
-
     return (
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
             <SafeAreaView style={styles.container}>
-                <HeaderBar userName="JK" />
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     {/* 🟢 Market Prices */}
-                    <Text style={styles.sectionTitle}>Market Prices</Text>
-                    <FlatList
-                        horizontal
-                        data={priceCards}
-                        keyExtractor={(item) => item.label}
-                        renderItem={({ item }) => (
-                            <GradientCard colors={item.gradient}>
-                                <Text style={styles.title}>{item.label}</Text>
-                                <Text style={styles.price}>
-                                    {typeof item.value === 'number'
-                                        ? `${item.value.toFixed(2)} ${item.currency}`
-                                        : 'Unavailable'}
-                                </Text>
-                            </GradientCard>
-                        )}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalList}
-                    />
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Global Market Prices</Text>
+                        {error && <Text style={styles.errorText}>⚠️ {error}</Text>}
+                        <FlatList
+                            horizontal
+                            data={priceCards}
+                            keyExtractor={(item) => item.label}
+                            renderItem={({ item }) => (
+                                <GradientCard colors={item.gradient}>
+                                    <Text style={styles.title}>{item.label}</Text>
+                                    <Text style={styles.price}>
+                                        {loading
+                                            ? 'Loading...'
+                                            : item.value !== null && item.value !== undefined
+                                                ? `${item.value.toFixed(2)} ${item.currency}`
+                                                : 'Unavailable'}
+                                    </Text>
+                                </GradientCard>
+                            )}
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalList}
+                        />
+                    </View>
 
-                    {/* 🟡 Recommended Tips */}
-                    <Text style={styles.sectionTitle}>🌿 Recommended Tips</Text>
-                    <FlatList
-                        horizontal
-                        data={recommendedTips}
-                        keyExtractor={(_, index) => `tip-${index}`}
-                        renderItem={({ item }) => (
-                            <GradientCard colors={['#cfbdb7ff', '#A1887F']}>
-                                <TipCard title={item.title} content={item.content} />
-                            </GradientCard>
-                        )}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalList}
-                    />
+                    {/* 🧮 Province Stats */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>📍 Province Overview</Text>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Farmers</Text>
+                            <Text style={styles.statValue}>{farmerCount}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Fermentary Owners</Text>
+                            <Text style={styles.statValue}>{fermentaryCount}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Warehouses</Text>
+                            <Text style={styles.statValue}>{warehouseCount}</Text>
+                        </View>
+                    </View>
 
-                    {/* 🔷 Recent Activities */}
-                    <Text style={styles.sectionTitle}>Graphs</Text>
+                    {/* 🌿 Recommended Tips */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>🌿 Recommended Tips</Text>
+                        <FlatList
+                            horizontal
+                            data={recommendedTips}
+                            keyExtractor={(_, index) => `tip-${index}`}
+                            renderItem={({ item }) => (
+                                <GradientCard colors={['#cfbdb7ff', '#A1887F']}>
+                                    <TipCard title={item.title} content={item.content} />
+                                </GradientCard>
+                            )}
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalList}
+                        />
+                    </View>
 
+                    {/* 🔷 Graphs Placeholder */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>📊 Graphs</Text>
+                        <View style={styles.graphPlaceholder}>
+                            <Text style={styles.emptyText}>Coming soon: cocoa trends & activity graphs</Text>
+                        </View>
+                    </View>
                 </ScrollView>
             </SafeAreaView>
         </LinearGradient>
@@ -92,46 +153,62 @@ export default function MarketPricesScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundPrimary, // Steel Gray
-    },
-    scrollContent: {
-        paddingVertical: 16,
-    },
+    container: { flex: 1 },
+    scrollContent: { paddingVertical: 16 },
+    section: { marginBottom: 24 },
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.textPrimary, // Black text
+        color: Colors.textPrimary,
         paddingHorizontal: 16,
         marginBottom: 12,
     },
-    horizontalList: {
-        paddingLeft: 16,
-        paddingRight: 8,
-        marginBottom: 16,
-    },
+    horizontalList: { paddingLeft: 16, paddingRight: 8 },
     title: {
         fontSize: 16,
-        color: Colors.textPrimary, // Black text
+        color: Colors.textPrimary,
         marginBottom: 6,
         fontWeight: '600',
     },
     price: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: Colors.actionPrimary, // Leaf Green for emphasis
+        color: Colors.actionPrimary,
     },
-    detailSection: {
+    errorText: {
+        color: 'red',
+        fontStyle: 'italic',
         paddingHorizontal: 16,
-        backgroundColor: Colors.backgroundSecondary, // White cards
+        marginBottom: 8,
+    },
+    graphPlaceholder: {
+        backgroundColor: Colors.backgroundSecondary,
         borderRadius: 8,
-        paddingVertical: 12,
-        marginBottom: 16,
+        padding: 16,
+        marginHorizontal: 16,
+        alignItems: 'center',
     },
     emptyText: {
-        color: '#666', // Slightly muted black
+        color: '#666',
         fontStyle: 'italic',
-        paddingVertical: 8,
+    },
+    statCard: {
+        backgroundColor: Colors.backgroundSecondary,
+        borderRadius: 8,
+        padding: 16,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    statLabel: {
+        fontSize: 16,
+        color: Colors.textPrimary,
+        fontWeight: '600',
+    },
+    statValue: {
+        fontSize: 20,
+        color: Colors.actionPrimary,
+        fontWeight: 'bold',
     },
 });

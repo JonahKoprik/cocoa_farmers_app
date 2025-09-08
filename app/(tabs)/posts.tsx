@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
     Alert, Button, FlatList, StyleSheet,
@@ -23,7 +24,7 @@ export default function PostsScreen() {
             return;
         }
         // console.log('🔐 Authenticated user ID:', user.id);
-        // setCurrentUserId(user.id);
+        setCurrentUserId(user.id);
     };
 
     const fetchPosts = async () => {
@@ -142,72 +143,74 @@ export default function PostsScreen() {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.backgroundPrimary }}>
-            <View style={styles.container}>
-                <TextInput
-                    value={content}
-                    onChangeText={setContent}
-                    placeholder="What's happening?"
-                    style={styles.input}
-                    placeholderTextColor={Colors.textPrimary}
-                />
-                <Button
-                    title={editingPostId ? 'Update Post' : 'Post'}
-                    color={Colors.actionPrimary}
-                    onPress={handleSubmit}
-                />
-                {editingPostId && (
-                    <TouchableOpacity
-                        onPress={() => {
-                            setContent('');
-                            setEditingPostId(null);
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1 }}>
+                <View style={styles.container}>
+                    <TextInput
+                        value={content}
+                        onChangeText={setContent}
+                        placeholder="What's happening?"
+                        style={styles.input}
+                        placeholderTextColor={Colors.textPrimary}
+                    />
+                    <Button
+                        title={editingPostId ? 'Update Post' : 'Post'}
+                        color={Colors.actionPrimary}
+                        onPress={handleSubmit}
+                    />
+                    {editingPostId && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                setContent('');
+                                setEditingPostId(null);
+                            }}
+                            style={{ marginTop: 8 }}
+                        >
+                            <Text style={{ color: Colors.actionPrimary }}>Cancel Edit</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <FlatList
+                        data={posts}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => {
+                            const isOwner = currentUserId && item.userId === currentUserId;
+
+                            return (
+                                <View style={styles.postCard}>
+                                    <Text style={styles.author}>
+                                        {item.author.name} · {item.author.role.toUpperCase()}
+                                    </Text>
+                                    <Text style={styles.content}>{item.content}</Text>
+                                    <Text style={styles.timestamp}>
+                                        {new Date(item.timestamp).toLocaleString()}
+                                    </Text>
+
+                                    {isOwner && (
+                                        <View style={styles.actionRow}>
+                                            <TouchableOpacity onPress={() => handleEdit(item.id)} style={styles.actionButton}>
+                                                <Text style={styles.actionText}>Edit</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
+                                                <Text style={styles.actionText}>Delete</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            );
                         }}
-                        style={{ marginTop: 8 }}
-                    >
-                        <Text style={{ color: Colors.actionPrimary }}>Cancel Edit</Text>
-                    </TouchableOpacity>
-                )}
-
-                <FlatList
-                    data={posts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => {
-                        const isOwner = currentUserId && item.userId === currentUserId;
-
-                        return (
-                            <View style={styles.postCard}>
-                                <Text style={styles.author}>
-                                    {item.author.name} · {item.author.role.toUpperCase()}
-                                </Text>
-                                <Text style={styles.content}>{item.content}</Text>
-                                <Text style={styles.timestamp}>
-                                    {new Date(item.timestamp).toLocaleString()}
-                                </Text>
-
-                                {isOwner && (
-                                    <View style={styles.actionRow}>
-                                        <TouchableOpacity onPress={() => handleEdit(item.id)} style={styles.actionButton}>
-                                            <Text style={styles.actionText}>Edit</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
-                                            <Text style={styles.actionText}>Delete</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    }}
-                    contentContainerStyle={{ paddingTop: 16 }}
-                />
-            </View>
-        </SafeAreaView>
+                        contentContainerStyle={{ paddingTop: 16 }}
+                    />
+                </View>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.backgroundPrimary,
+
         padding: 16,
     },
     input: {

@@ -54,9 +54,9 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="posts"
                 options={{
-                    title: 'Post',
+                    title: 'Discussion',
                     tabBarIcon: ({ focused, color, size }) => <Ionicons
-                        name={focused ? "add-circle" : "add-circle-outline"}
+                        name={focused ? "chatbubble" : "chatbubble-outline"}
                         size={size}
                         color={color}
                     />,

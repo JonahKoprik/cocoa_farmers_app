@@ -1,7 +1,7 @@
 import { useFermentaries } from '@/hooks/useFermentary';
-import { useWarehouses } from '@/hooks/useWarehouses';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
     ScrollView,
@@ -14,22 +14,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 
 type LLG = { llg_name: string };
-type Province = { province_id: string; province_name: string };
 type Category = 'Fermentary' | 'Warehouse';
 
 export default function MarketPricesScreen() {
     const [selectedLLG, setSelectedLLG] = useState('');
-    const [selectedProvinceName, setSelectedProvinceName] = useState('');
     const [llgs, setLLGs] = useState<LLG[]>([]);
-    const [provinces, setProvinces] = useState<Province[]>([]);
     const [category, setCategory] = useState<Category>('Fermentary');
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+    const [errorWarehouses, setErrorWarehouses] = useState<string | null>(null);
+    const [userRole, setUserRole] = useState<string | null>(null);
 
     const normalizedLLG = selectedLLG.trim();
-    const normalizedProvinceName = selectedProvinceName.trim();
-
-    const selectedProvinceId = provinces.find(
-        (p) => p.province_name === normalizedProvinceName
-    )?.province_id ?? null;
 
     const {
         data: fermentaries,
@@ -37,27 +33,75 @@ export default function MarketPricesScreen() {
         error: errorFermentaries,
     } = useFermentaries(normalizedLLG);
 
-    const {
-        data: warehouses,
-        loading: loadingWarehouses,
-        error: errorWarehouses,
-    } = useWarehouses(selectedProvinceId);
-
     useEffect(() => {
         const fetchLLGs = async () => {
             const { data, error } = await supabase.from('llg').select('llg_name');
             if (!error && data) setLLGs(data);
         };
 
-        const fetchProvinces = async () => {
+        const fetchUserRole = async () => {
+            const { data: session } = await supabase.auth.getUser();
+            const email = session?.user?.email;
+            if (!email) return;
+
             const { data, error } = await supabase
-                .from('provinces')
-                .select('province_id, province_name');
-            if (!error && data) setProvinces(data);
+                .from('user_profile')
+                .select('role')
+                .eq('email', email)
+                .single();
+
+            if (!error && data?.role) {
+                const role = data.role.toLowerCase();
+                setUserRole(role);
+                if (['warehouse', 'organization'].includes(role)) {
+                    setCategory('Warehouse');
+                }
+            }
+        };
+
+        const fetchWarehousesFromWarehouseUsers = async () => {
+            setLoadingWarehouses(true);
+            setErrorWarehouses(null);
+
+            const { data: users, error: userError } = await supabase
+                .from('user_profile')
+                .select('province_id')
+                .eq('role', 'warehouse');
+
+            if (userError || !users) {
+                setErrorWarehouses('Failed to fetch warehouse-role users');
+                setLoadingWarehouses(false);
+                return;
+            }
+
+            const provinceIds = Array.from(
+                new Set(users.map((u) => u.province_id).filter(Boolean))
+            );
+
+            if (provinceIds.length === 0) {
+                setWarehouses([]);
+                setLoadingWarehouses(false);
+                return;
+            }
+
+            const { data: warehouseData, error: warehouseError } = await supabase
+                .from('warehouse')
+                .select('*')
+                .in('province_id', provinceIds);
+
+            if (warehouseError || !warehouseData) {
+                setErrorWarehouses('Failed to fetch warehouses');
+                setWarehouses([]);
+            } else {
+                setWarehouses(warehouseData);
+            }
+
+            setLoadingWarehouses(false);
         };
 
         fetchLLGs();
-        fetchProvinces();
+        fetchUserRole();
+        fetchWarehousesFromWarehouseUsers();
     }, []);
 
     const renderFacilityCard = (
@@ -95,29 +139,36 @@ export default function MarketPricesScreen() {
         </View>
     );
 
-    const renderCategoryToggle = () => (
-        <View style={styles.toggleContainer}>
-            {['Fermentary', 'Warehouse'].map((cat) => (
-                <TouchableOpacity
-                    key={cat}
-                    style={[
-                        styles.toggleButton,
-                        category === cat && styles.toggleButtonActive,
-                    ]}
-                    onPress={() => setCategory(cat as Category)}
-                >
-                    <Text
+    const renderCategoryToggle = () => {
+        const allowedCategories: Category[] =
+            userRole && ['warehouse', 'organization'].includes(userRole)
+                ? ['Warehouse']
+                : ['Fermentary', 'Warehouse'];
+
+        return (
+            <View style={styles.toggleContainer}>
+                {allowedCategories.map((cat) => (
+                    <TouchableOpacity
+                        key={cat}
                         style={[
-                            styles.toggleText,
-                            category === cat && styles.toggleTextActive,
+                            styles.toggleButton,
+                            category === cat && styles.toggleButtonActive,
                         ]}
+                        onPress={() => setCategory(cat)}
                     >
-                        {cat}
-                    </Text>
-                </TouchableOpacity>
-            ))}
-        </View>
-    );
+                        <Text
+                            style={[
+                                styles.toggleText,
+                                category === cat && styles.toggleTextActive,
+                            ]}
+                        >
+                            {cat}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        );
+    };
 
     const renderPicker = () => {
         if (category === 'Fermentary') {
@@ -140,23 +191,9 @@ export default function MarketPricesScreen() {
 
         if (category === 'Warehouse') {
             return (
-                <>
-                    <Text style={styles.sectionTitle}>Select Province</Text>
-                    <Picker
-                        style={styles.picker}
-                        selectedValue={selectedProvinceName}
-                        onValueChange={setSelectedProvinceName}
-                    >
-                        <Picker.Item label="Select Province" value="" />
-                        {provinces.map((prov, i) => (
-                            <Picker.Item
-                                key={i}
-                                label={prov.province_name}
-                                value={prov.province_name}
-                            />
-                        ))}
-                    </Picker>
-                </>
+                <Text style={styles.sectionTitle}>
+                    View nearby warehouses in your province
+                </Text>
             );
         }
 
@@ -181,12 +218,6 @@ export default function MarketPricesScreen() {
         }
 
         if (category === 'Warehouse') {
-            if (!selectedProvinceId)
-                return (
-                    <Text style={styles.loadingText}>
-                        Please select a province to view warehouses.
-                    </Text>
-                );
             if (loadingWarehouses)
                 return <Text style={styles.loadingText}>Loading warehouses...</Text>;
             if (errorWarehouses)
@@ -200,20 +231,21 @@ export default function MarketPricesScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {renderCategoryToggle()}
-                {renderPicker()}
-                {renderContent()}
-            </ScrollView>
-        </SafeAreaView>
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    {renderCategoryToggle()}
+                    {renderPicker()}
+                    {renderContent()}
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.backgroundPrimary,
     },
     scrollContent: {
         paddingVertical: 16,
@@ -270,13 +302,17 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         borderRadius: 8,
     },
+
+
+
     cardText: {
         fontSize: 14,
         color: Colors.textPrimary,
         marginBottom: 2,
     },
     cardPrice: {
-        fontWeight: 'bold', color: Colors.actionPrimary,
+        fontWeight: 'bold',
+        color: Colors.actionPrimary,
     },
     cardFooter: {
         fontSize: 12,
