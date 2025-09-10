@@ -1,44 +1,53 @@
 import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 
+type CommodityPrice = {
+  commodity: string;
+  region: string;
+  currency: string;
+  exchange: string | null;
+};
+
 export const usePrices = () => {
-  const [globalPrices, setGlobalPrices] = useState<{ global: number | null }>({ global: null });
+  const [globalPrices, setGlobalPrices] = useState<CommodityPrice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchGlobalPrice = async () => {
       try {
-        const { data, error: supabaseError } = await supabase.functions.invoke('global-cocoa-price');
+        const { data, error: supabaseError } = await supabase
+          .from('commodity_prices')
+          .select('commodity, region, currency, exchange')
+          .eq('commodity', 'cocoa')
+          .eq('region', 'Global')
+          .order('recorded_at', { ascending: false })
+          .limit(1);
 
         if (supabaseError) {
-          console.error("❌ Supabase function error:", supabaseError.message);
+          console.error('❌ Supabase query error:', supabaseError.message);
           setError(supabaseError.message);
+          setGlobalPrices(null);
+          return;
         }
 
-        let globalPrice = data?.global ?? null;
+        const latest = data?.[0];
 
-        if (globalPrice === null) {
-          console.warn("⚠️ Supabase returned null for global price. Falling back to external API.");
-
-          const ninjasRes = await fetch('https://api.api-ninjas.com/v1/commodityprice?name=cocoa', {
-            headers: {
-              'X-Api-Key': process.env.EXPO_PUBLIC_NINJAS_API_KEY ?? '',
-            },
+        if (latest) {
+          setGlobalPrices({
+            commodity: latest.commodity,
+            region: latest.region,
+            currency: latest.currency,
+            exchange: latest.exchange,
           });
-
-          const ninjasData = await ninjasRes.json();
-          globalPrice = ninjasData?.price ?? null;
-
-          console.log("🌍 Fallback global price from API Ninjas:", globalPrice);
         } else {
-          console.log("✅ Global price from Supabase:", globalPrice);
+          console.warn('⚠️ No global cocoa price found in Supabase.');
+          setGlobalPrices(null);
         }
-
-        setGlobalPrices({ global: globalPrice });
       } catch (err: any) {
-        console.error("❌ Global price fetch error:", err.message);
+        console.error('❌ Global price fetch error:', err.message);
         setError(err.message ?? 'Unknown error');
+        setGlobalPrices(null);
       } finally {
         setLoading(false);
       }

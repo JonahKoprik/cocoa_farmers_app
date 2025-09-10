@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientCard } from '../../components/GradientCard';
 import { TipCard } from '../../components/TipCard';
-import { PriceCard } from '../../components/types/PriceCard';
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
@@ -65,14 +64,17 @@ export default function MarketPricesScreen() {
         fetchCounts();
     }, [user?.email]);
 
-    const priceCards: PriceCard[] = [
-        {
-            label: 'Global Cocoa Price',
-            value: globalPrices.global,
-            gradient: ['#D2B48C', '#D2B48C', '#D2B48C'],
-            currency: 'USD/ton',
-        },
-    ];
+    const priceCards = globalPrices
+        ? [
+            {
+                label: `${globalPrices.commodity ?? 'Commodity'} Info`,
+                gradient: ['#D2B48C', '#D2B48C', '#D2B48C'],
+                currency: globalPrices.currency ?? 'USD',
+                region: globalPrices.region ?? 'Global',
+                exchange: globalPrices.exchange ?? '—',
+            },
+        ]
+        : [];
 
     const recommendedTips = tips.slice(0, 5);
 
@@ -82,23 +84,20 @@ export default function MarketPricesScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     {/* 🟢 Market Prices */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Global Market Prices</Text>
+                        <Text style={styles.sectionTitle}>Global Market Info</Text>
                         {error && <Text style={styles.errorText}>⚠️ {error}</Text>}
                         <FlatList
                             horizontal
                             data={priceCards}
                             keyExtractor={(item) => item.label}
                             renderItem={({ item }) => (
-                                <GradientCard colors={item.gradient}>
+                                <GradientCard colors={['#D2B48C', '#A0522D', '#8B4513']}>
                                     <Text style={styles.title}>{item.label}</Text>
-                                    <Text style={styles.price}>
-                                        {loading
-                                            ? 'Loading...'
-                                            : item.value !== null && item.value !== undefined
-                                                ? `${item.value.toFixed(2)} ${item.currency}`
-                                                : 'Unavailable'}
-                                    </Text>
+                                    <Text style={styles.meta}>Region: {item.region}</Text>
+                                    <Text style={styles.meta}>Currency: {item.currency}</Text>
+                                    <Text style={styles.meta}>Exchange: {item.exchange}</Text>
                                 </GradientCard>
+
                             )}
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.horizontalList}
@@ -143,7 +142,9 @@ export default function MarketPricesScreen() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>📊 Graphs</Text>
                         <View style={styles.graphPlaceholder}>
-                            <Text style={styles.emptyText}>Coming soon: cocoa trends & activity graphs</Text>
+                            <Text style={styles.emptyText}>
+                                Coming soon: cocoa trends & activity graphs
+                            </Text>
                         </View>
                     </View>
                 </ScrollView>
@@ -170,10 +171,10 @@ const styles = StyleSheet.create({
         marginBottom: 6,
         fontWeight: '600',
     },
-    price: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: Colors.actionPrimary,
+    meta: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 4,
     },
     errorText: {
         color: 'red',

@@ -16,7 +16,7 @@ type NewsArticle = {
     title: string;
     description: string;
     url: string;
-    source?: string;
+    source_name?: string;
 };
 
 const fallbackArticles: NewsArticle[] = [
@@ -41,25 +41,32 @@ export default function NewsFeedScreen() {
         const fetchNews = async () => {
             try {
                 const res = await fetch(
-                    'https://tuxlvyfredtuknhsqdtj.supabase.co/functions/v1/fetch-news',
+                    'https://tuxlvyfredtuknhsqdtj.supabase.co/rest/v1/news_articles?select=title,description,url,source_name&order=published_at.desc',
                     {
-                        method: 'POST',
+                        method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',
+                            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
                             Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
                         },
-                        body: JSON.stringify({ query: 'PNG cocoa' }),
                     }
                 );
 
                 const data = await res.json();
-                if (res.ok && Array.isArray(data.articles)) {
-                    setArticles(data.articles);
+                if (res.ok && Array.isArray(data)) {
+                    const formatted = data.map((item) => ({
+                        title: item.title,
+                        description: item.description,
+                        url: item.url,
+                        source_name: item.source_name,
+                    }));
+                    setArticles(formatted);
                 } else {
+                    console.warn('⚠️ Unexpected response format:', data);
                     setArticles(fallbackArticles);
                 }
             } catch (err) {
-                console.error('Failed to fetch cocoa news:', err);
+                console.error('❌ Failed to fetch news_articles from Supabase:', err);
                 setArticles(fallbackArticles);
             }
         };
@@ -71,8 +78,8 @@ export default function NewsFeedScreen() {
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
             <SafeAreaView style={styles.container}>
                 <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-                    {/* Coresoul Section */}
-                    <Text style={styles.sectionTitle}>Global New</Text>
+                    {/* Global News Section */}
+                    <Text style={styles.sectionTitle}>Global News</Text>
                     <FlatList
                         data={articles}
                         keyExtractor={(item, index) => index.toString()}
@@ -88,21 +95,33 @@ export default function NewsFeedScreen() {
                                     style={styles.card}
                                 >
                                     <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                    <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
+                                    <Text
+                                        style={styles.body}
+                                        numberOfLines={3}
+                                        ellipsizeMode="tail"
+                                    >
+                                        {item.description || 'No summary available.'}
+                                    </Text>
                                     <Text style={styles.link}>View More</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                         )}
                     />
 
-                    {/*Recent Activities Section */}
+                    {/* Local News Section */}
                     <Text style={styles.sectionTitle}>Local News</Text>
                     <View style={styles.verticalList}>
                         {articles.map((item, index) => (
                             <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
                                 <View style={styles.verticalCard}>
                                     <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                    <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
+                                    <Text
+                                        style={styles.body}
+                                        numberOfLines={3}
+                                        ellipsizeMode="tail"
+                                    >
+                                        {item.description || 'No summary available.'}
+                                    </Text>
                                     <Text style={styles.link}>View More</Text>
                                 </View>
                             </TouchableOpacity>
@@ -124,7 +143,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.textPrimary, // Black
+        color: Colors.textPrimary,
         paddingHorizontal: 16,
         marginBottom: 12,
     },
@@ -145,7 +164,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     verticalCard: {
-        backgroundColor: Colors.backgroundSecondary, // White (30%)
+        backgroundColor: Colors.backgroundSecondary,
         padding: 16,
         borderRadius: 12,
         marginBottom: 16,
@@ -155,17 +174,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 4,
-        color: Colors.textPrimary, // Black
+        color: Colors.textPrimary,
     },
     body: {
         fontSize: 14,
-        color: '#333', // Slightly muted black for body text
+        color: '#333',
         marginBottom: 8,
     },
     link: {
-        color: Colors.actionPrimary, // Leaf Green (10%)
+        color: Colors.actionPrimary,
         fontSize: 14,
         fontWeight: '500',
     },
 });
-
