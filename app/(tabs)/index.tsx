@@ -91,7 +91,7 @@ export default function MarketPricesScreen() {
                             data={priceCards}
                             keyExtractor={(item) => item.label}
                             renderItem={({ item }) => (
-                                <GradientCard colors={['#D2B48C', '#A0522D', '#8B4513']}>
+                                <GradientCard colors={['#ffffffff', '#ffffffff', '#ffffffff']}>
                                     <Text style={styles.title}>{item.label}</Text>
                                     <Text style={styles.meta}>Region: {item.region}</Text>
                                     <Text style={styles.meta}>Currency: {item.currency}</Text>
@@ -129,7 +129,7 @@ export default function MarketPricesScreen() {
                             data={recommendedTips}
                             keyExtractor={(_, index) => `tip-${index}`}
                             renderItem={({ item }) => (
-                                <GradientCard colors={['#cfbdb7ff', '#A1887F']}>
+                                <GradientCard colors={['#a1f186ff', '#A1887F']}>
                                     <TipCard title={item.title} content={item.content} />
                                 </GradientCard>
                             )}

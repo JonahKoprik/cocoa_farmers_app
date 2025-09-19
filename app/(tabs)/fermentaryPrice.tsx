@@ -1,14 +1,13 @@
 import { useFermentaries } from '@/hooks/useFermentary';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
-    ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
@@ -16,7 +15,11 @@ import { Colors } from '../../constants/colors';
 type LLG = { llg_name: string };
 type Category = 'Fermentary' | 'Warehouse';
 
+
+// MarketPricesScreen.tsx
 export default function MarketPricesScreen() {
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [newPrice, setNewPrice] = useState('');
     const [selectedLLG, setSelectedLLG] = useState('');
     const [llgs, setLLGs] = useState<LLG[]>([]);
     const [category, setCategory] = useState<Category>('Fermentary');
@@ -26,7 +29,6 @@ export default function MarketPricesScreen() {
     const [userRole, setUserRole] = useState<string | null>(null);
 
     const normalizedLLG = selectedLLG.trim();
-
     const {
         data: fermentaries,
         loading: loadingFermentaries,
@@ -51,8 +53,9 @@ export default function MarketPricesScreen() {
                 .single();
 
             if (!error && data?.role) {
-                const role = data.role.toLowerCase();
+                const role = data.role.trim().toLowerCase();
                 setUserRole(role);
+
                 if (['warehouse', 'organization'].includes(role)) {
                     setCategory('Warehouse');
                 }
@@ -66,16 +69,20 @@ export default function MarketPricesScreen() {
             const { data: users, error: userError } = await supabase
                 .from('user_profile')
                 .select('province_id')
-                .eq('role', 'warehouse');
+                .ilike('role', 'warehouse');
 
-            if (userError || !users) {
+            if (userError) {
                 setErrorWarehouses('Failed to fetch warehouse-role users');
                 setLoadingWarehouses(false);
                 return;
             }
 
             const provinceIds = Array.from(
-                new Set(users.map((u) => u.province_id).filter(Boolean))
+                new Set(
+                    users
+                        .map((u) => typeof u.province_id === 'string' ? u.province_id.trim() : null)
+                        .filter((id): id is string => !!id && id.length > 0)
+                )
             );
 
             if (provinceIds.length === 0) {
@@ -86,14 +93,14 @@ export default function MarketPricesScreen() {
 
             const { data: warehouseData, error: warehouseError } = await supabase
                 .from('warehouse')
-                .select('*')
+                .select('warehouse_id, warehouse_name, warehouse_price, created_at, province_id, user_id')
                 .in('province_id', provinceIds);
 
-            if (warehouseError || !warehouseData) {
+            if (warehouseError) {
                 setErrorWarehouses('Failed to fetch warehouses');
                 setWarehouses([]);
             } else {
-                setWarehouses(warehouseData);
+                setWarehouses(warehouseData ?? []);
             }
 
             setLoadingWarehouses(false);
@@ -104,38 +111,20 @@ export default function MarketPricesScreen() {
         fetchWarehousesFromWarehouseUsers();
     }, []);
 
-    const renderFacilityCard = (
-        f: any,
-        index: number,
-        label: 'Fermentary' | 'Warehouse'
-    ) => (
+    const renderFacilityCard = (f: any, index: number, label: 'Fermentary' | 'Warehouse') => (
         <View key={index} style={styles.card}>
-            <Text style={styles.cardText}>
-                {label} Name: {f.name || f.warehouse_name}
-            </Text>
+            <Text style={styles.cardText}>{label} Name: {f.name || f.warehouse_name}</Text>
             <Text style={styles.cardText}>Contact: {f.contact || 'N/A'}</Text>
             <Text style={styles.cardText}>Owner: {f.owner_name || 'Unknown'}</Text>
             <Text style={styles.cardText}>Ward: {f.ward_name || 'N/A'}</Text>
             <Text style={styles.cardText}>LLG: {f.llg_name || 'N/A'}</Text>
             {f.price_per_kg != null && (
-                <Text>
-                    Wet Bean:{' '}
-                    <Text style={styles.cardPrice}>
-                        {f.price_per_kg.toFixed(2)} PGK/kg
-                    </Text>
-                </Text>
+                <Text>Wet Bean: <Text style={styles.cardPrice}>{f.price_per_kg.toFixed(2)} PGK/kg</Text></Text>
             )}
             {f.warehouse_price != null && (
-                <Text>
-                    Warehouse Price:{' '}
-                    <Text style={styles.cardPrice}>
-                        {f.warehouse_price.toFixed(2)} PGK/kg
-                    </Text>
-                </Text>
+                <Text>Warehouse Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/kg</Text></Text>
             )}
-            <Text style={styles.cardFooter}>
-                Updated: {new Date(f.updated_at || f.created_at).toLocaleDateString()}
-            </Text>
+            <Text style={styles.cardFooter}>Updated: {new Date(f.updated_at || f.created_at).toLocaleDateString()}</Text>
         </View>
     );
 
@@ -150,20 +139,10 @@ export default function MarketPricesScreen() {
                 {allowedCategories.map((cat) => (
                     <TouchableOpacity
                         key={cat}
-                        style={[
-                            styles.toggleButton,
-                            category === cat && styles.toggleButtonActive,
-                        ]}
+                        style={[styles.toggleButton, category === cat && styles.toggleButtonActive]}
                         onPress={() => setCategory(cat)}
                     >
-                        <Text
-                            style={[
-                                styles.toggleText,
-                                category === cat && styles.toggleTextActive,
-                            ]}
-                        >
-                            {cat}
-                        </Text>
+                        <Text style={[styles.toggleText, category === cat && styles.toggleTextActive]}>{cat}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -175,11 +154,7 @@ export default function MarketPricesScreen() {
             return (
                 <>
                     <Text style={styles.sectionTitle}>Select Your LLG</Text>
-                    <Picker
-                        style={styles.picker}
-                        selectedValue={selectedLLG}
-                        onValueChange={setSelectedLLG}
-                    >
+                    <Picker style={styles.picker} selectedValue={selectedLLG} onValueChange={setSelectedLLG}>
                         <Picker.Item label="Select LLG" value="" />
                         {llgs.map((llg, i) => (
                             <Picker.Item key={i} label={llg.llg_name} value={llg.llg_name} />
@@ -190,10 +165,65 @@ export default function MarketPricesScreen() {
         }
 
         if (category === 'Warehouse') {
+            return <Text style={styles.sectionTitle}>View nearby warehouses in your province</Text>;
+        }
+
+        return null;
+    };
+
+    const renderCreatePriceButton = () => {
+        if (!userRole) return null;
+
+        const isFarmer = userRole === 'farmer';
+        const isFermentaryOwner = userRole === 'fermentaryowner';
+        const isWarehouseUser = userRole === 'warehouse';
+
+        if (isFarmer) return null;
+
+        if (category === 'Fermentary' && isFermentaryOwner) {
             return (
-                <Text style={styles.sectionTitle}>
-                    View nearby warehouses in your province
-                </Text>
+                <TouchableOpacity style={styles.createButton} onPress={() => console.log('Create Fermentary Price')}>
+                    <Text style={styles.createButtonText}>Create Fermentary Price</Text>
+                </TouchableOpacity>
+            );
+        }
+
+        if (category === 'Warehouse' && isWarehouseUser) {
+            return (
+                <>
+                    <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={() => setShowCreateForm((prev) => !prev)}
+                    >
+                        <Text style={styles.createButtonText}>
+                            {showCreateForm ? 'Cancel' : 'Create Warehouse Price'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {showCreateForm && (
+                        <View style={styles.formContainer}>
+                            <Text style={styles.formLabel}>Enter Price (PGK/kg):</Text>
+                            <TextInput
+                                style={styles.input}
+                                keyboardType="numeric"
+                                value={newPrice}
+                                onChangeText={setNewPrice}
+                                placeholder="e.g. 12.50"
+                            />
+                            <TouchableOpacity
+                                style={styles.submitButton}
+                                onPress={() => {
+                                    console.log('Submitted price:', newPrice);
+                                    // TODO: Add Supabase insert logic here
+                                    setShowCreateForm(false);
+                                    setNewPrice('');
+                                }}
+                            >
+                                <Text style={styles.submitButtonText}>Submit Price</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
             );
         }
 
@@ -202,44 +232,34 @@ export default function MarketPricesScreen() {
 
     const renderContent = () => {
         if (category === 'Fermentary') {
-            if (!normalizedLLG)
-                return (
-                    <Text style={styles.loadingText}>
-                        Please select an LLG to view fermentaries.
-                    </Text>
-                );
-            if (loadingFermentaries)
-                return <Text style={styles.loadingText}>Loading fermentaries...</Text>;
-            if (errorFermentaries)
-                return <Text style={styles.errorText}>Error: {errorFermentaries}</Text>;
-            if (fermentaries.length === 0)
-                return <Text style={styles.loadingText}>No fermentaries found.</Text>;
+            if (!normalizedLLG) return <Text style={styles.loadingText}>Please select an LLG to view fermentaries.</Text>;
+            if (loadingFermentaries) return <Text style={styles.loadingText}>Loading fermentaries...</Text>;
+            if (errorFermentaries) return <Text style={styles.errorText}>Error: {errorFermentaries}</Text>;
+            if (fermentaries.length === 0) return <Text style={styles.loadingText}>No fermentaries found.</Text>;
             return fermentaries.map((f, i) => renderFacilityCard(f, i, 'Fermentary'));
         }
 
         if (category === 'Warehouse') {
-            if (loadingWarehouses)
-                return <Text style={styles.loadingText}>Loading warehouses...</Text>;
-            if (errorWarehouses)
-                return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;
-            if (warehouses.length === 0)
-                return <Text style={styles.loadingText}>No warehouses found.</Text>;
+            if (loadingWarehouses) return <Text style={styles.loadingText}>Loading warehouses...</Text>;
+            if (errorWarehouses) return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;
+            if (warehouses.length === 0) return <Text style={styles.loadingText}>No warehouses found.</Text>;
             return warehouses.map((w, i) => renderFacilityCard(w, i, 'Warehouse'));
         }
 
         return null;
     };
-
     return (
-        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    {renderCategoryToggle()}
-                    {renderPicker()}
+        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.backgroundPrimary }}>
+            <View style={styles.container}>
+                {renderCategoryToggle()}
+                {renderPicker()}
+                {renderCreatePriceButton()}
+                <View style={{ flex: 1 }}>
                     {renderContent()}
-                </ScrollView>
-            </SafeAreaView>
-        </LinearGradient>
+
+                </View>
+            </View>
+        </SafeAreaView>
     );
 }
 
@@ -284,7 +304,36 @@ const styles = StyleSheet.create({
     },
     toggleTextActive: {
         color: Colors.backgroundSecondary,
+    }, formContainer: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 8,
+        marginVertical: 10,
     },
+    formLabel: {
+        fontSize: 16,
+        marginBottom: 8,
+        color: '#333',
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 6,
+        padding: 10,
+        marginBottom: 12,
+    },
+    submitButton: {
+        backgroundColor: Colors.actionPrimary,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
     errorText: {
         color: 'red',
         marginHorizontal: 16,
@@ -319,4 +368,17 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginTop: 8,
     },
+    createButton: {
+        backgroundColor: Colors.actionPrimary,
+        padding: 12,
+        marginVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    createButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
 });

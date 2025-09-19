@@ -8,7 +8,23 @@ type CommodityPrice = {
   exchange: string | null;
 };
 
-export const usePrices = () => {
+type UsePricesResult = {
+  globalPrices: CommodityPrice | null;
+  loading: boolean;
+  error: string | null;
+};
+
+// 🧾 Modular logger for onboarding clarity
+const logSupabaseResponse = (data: any, context: string) => {
+  if (!data || data.length === 0) {
+    console.warn(`⚠️ [${context}] Supabase returned no matching records.`);
+  } else {
+    console.log(`📦 [${context}] Supabase response:`);
+    console.table(data);
+  }
+};
+
+export const usePrices = (): UsePricesResult => {
   const [globalPrices, setGlobalPrices] = useState<CommodityPrice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,13 +32,27 @@ export const usePrices = () => {
   useEffect(() => {
     const fetchGlobalPrice = async () => {
       try {
+        // 🧠 Optional: log current session for debugging
+        const {
+          data: sessionData,
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.warn('⚠️ Supabase session fetch error:', sessionError.message);
+        } else {
+          console.log('👤 Supabase session:', sessionData?.session?.user?.id ?? 'No user ID');
+        }
+
         const { data, error: supabaseError } = await supabase
           .from('commodity_prices')
           .select('commodity, region, currency, exchange')
-          .eq('commodity', 'cocoa')
+          .eq('commodity', 'platinum')
           .eq('region', 'Global')
           .order('recorded_at', { ascending: false })
           .limit(1);
+
+        logSupabaseResponse(data, 'Global Cocoa Price');
 
         if (supabaseError) {
           console.error('❌ Supabase query error:', supabaseError.message);

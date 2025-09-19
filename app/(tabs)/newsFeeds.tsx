@@ -1,9 +1,11 @@
 import { Colors } from '@/constants/colors';
+import { useLocalNews } from '@/hooks/useLocalNews';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     FlatList,
     Linking,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,14 +14,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type NewsArticle = {
+type GlobalNewsArticle = {
     title: string;
     description: string;
     url: string;
     source_name?: string;
 };
 
-const fallbackArticles: NewsArticle[] = [
+const fallbackGlobal: GlobalNewsArticle[] = [
     {
         title: 'PNG Cocoa Prices Rise in August',
         description:
@@ -35,59 +37,89 @@ const fallbackArticles: NewsArticle[] = [
 ];
 
 export default function NewsFeedScreen() {
-    const [articles, setArticles] = useState<NewsArticle[]>([]);
+    const [globalNews, setGlobalNews] = useState<GlobalNewsArticle[]>([]);
+    const [refreshingGlobal, setRefreshingGlobal] = useState(false);
+
+    const {
+        articles: localNews,
+        refreshing: refreshingLocal,
+        refetch: refetchLocal,
+    } = useLocalNews();
+
+    const fetchGlobalNews = useCallback(async () => {
+        setRefreshingGlobal(true);
+        try {
+            const res = await fetch(
+                'https://tuxlvyfredtuknhsqdtj.supabase.co/rest/v1/news_articles?select=title,description,url,source_name&order=published_at.desc',
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+                        Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+                    },
+                }
+            );
+
+            const data = await res.json();
+            if (res.ok && Array.isArray(data)) {
+                const formatted = data.map((item) => ({
+                    title: item.title,
+                    description: item.description,
+                    url: item.url,
+                    source_name: item.source_name,
+                }));
+                setGlobalNews(formatted);
+            } else {
+                console.warn('⚠️ Unexpected global response format:', data);
+                setGlobalNews(fallbackGlobal);
+            }
+        } catch (err) {
+            console.error('❌ Failed to fetch global news:', err);
+            setGlobalNews(fallbackGlobal);
+        } finally {
+            setRefreshingGlobal(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchNews = async () => {
-            try {
-                const res = await fetch(
-                    'https://tuxlvyfredtuknhsqdtj.supabase.co/rest/v1/news_articles?select=title,description,url,source_name&order=published_at.desc',
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-                            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-                        },
-                    }
-                );
+        fetchGlobalNews();
+    }, [fetchGlobalNews]);
 
-                const data = await res.json();
-                if (res.ok && Array.isArray(data)) {
-                    const formatted = data.map((item) => ({
-                        title: item.title,
-                        description: item.description,
-                        url: item.url,
-                        source_name: item.source_name,
-                    }));
-                    setArticles(formatted);
-                } else {
-                    console.warn('⚠️ Unexpected response format:', data);
-                    setArticles(fallbackArticles);
-                }
-            } catch (err) {
-                console.error('❌ Failed to fetch news_articles from Supabase:', err);
-                setArticles(fallbackArticles);
-            }
-        };
-
-        fetchNews();
-    }, []);
+    const handleRefresh = () => {
+        fetchGlobalNews();
+        refetchLocal();
+    };
 
     return (
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
             <SafeAreaView style={styles.container}>
-                <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+                <ScrollView
+                    style={styles.container}
+                    contentContainerStyle={styles.scrollContent}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshingGlobal || refreshingLocal}
+                            onRefresh={handleRefresh}
+                        />
+                    }
+                >
                     {/* Global News Section */}
                     <Text style={styles.sectionTitle}>Global News</Text>
                     <FlatList
-                        data={articles}
+                        data={globalNews}
                         keyExtractor={(item, index) => index.toString()}
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.horizontalList}
                         renderItem={({ item }) => (
-                            <TouchableOpacity onPress={() => Linking.openURL(item.url)}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    if (item.url && typeof item.url === 'string') {
+                                        Linking.openURL(item.url);
+                                    }
+                                }}
+                            >
                                 <LinearGradient
                                     colors={['#ded6cbff', '#ded6cbff', '#ded6cbff'] as const}
                                     start={{ x: 0, y: 0 }}
@@ -95,11 +127,7 @@ export default function NewsFeedScreen() {
                                     style={styles.card}
                                 >
                                     <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                    <Text
-                                        style={styles.body}
-                                        numberOfLines={3}
-                                        ellipsizeMode="tail"
-                                    >
+                                    <Text style={styles.body} numberOfLines={3} ellipsizeMode="tail">
                                         {item.description || 'No summary available.'}
                                     </Text>
                                     <Text style={styles.link}>View More</Text>
@@ -111,28 +139,29 @@ export default function NewsFeedScreen() {
                     {/* Local News Section */}
                     <Text style={styles.sectionTitle}>Local News</Text>
                     <View style={styles.verticalList}>
-                        {articles.map((item, index) => (
-                            <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
-                                <View style={styles.verticalCard}>
-                                    <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                    <Text
-                                        style={styles.body}
-                                        numberOfLines={3}
-                                        ellipsizeMode="tail"
-                                    >
-                                        {item.description || 'No summary available.'}
-                                    </Text>
-                                    <Text style={styles.link}>View More</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
+                        {localNews.map((item) => {
+                            const link = item.url ?? item.source;
+                            if (!link || typeof link !== 'string' || !link.startsWith('http')) return null;
+
+                            return (
+                                <TouchableOpacity key={item.id} onPress={() => Linking.openURL(link)}>
+                                    <View style={styles.verticalCard}>
+                                        <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                        <Text style={styles.body} numberOfLines={3} ellipsizeMode="tail">
+                                            {item.summary ?? 'No summary available.'}
+                                        </Text>
+                                        <Text style={styles.link}>View More</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 </ScrollView>
             </SafeAreaView>
         </LinearGradient>
     );
 }
-
+//Styles for this page
 const styles = StyleSheet.create({
     container: {
         flex: 1,

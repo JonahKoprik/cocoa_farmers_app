@@ -70,7 +70,7 @@ export function useFermentaries(llgName: string) {
               llg_name
             )
           ),
-          owner:profiles (
+          owner:user_profile (
             full_name
           )
         `)
