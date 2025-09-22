@@ -22,8 +22,7 @@ export async function createPost({ content }: CreatePostInput) {
     .insert([
       {
         content,
-        likes: 0,
-        liked_by: [],
+        
         user_id: user.id, // ✅ Ownership tracking
       },
     ])

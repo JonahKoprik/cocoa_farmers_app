@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientCard } from '../../components/GradientCard';
-import { TipCard } from '../../components/TipCard';
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
@@ -121,22 +120,6 @@ export default function MarketPricesScreen() {
                         </View>
                     </View>
 
-                    {/* 🌿 Recommended Tips */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>🌿 Recommended Tips</Text>
-                        <FlatList
-                            horizontal
-                            data={recommendedTips}
-                            keyExtractor={(_, index) => `tip-${index}`}
-                            renderItem={({ item }) => (
-                                <GradientCard colors={['#a1f186ff', '#A1887F']}>
-                                    <TipCard title={item.title} content={item.content} />
-                                </GradientCard>
-                            )}
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.horizontalList}
-                        />
-                    </View>
 
                     {/* 🔷 Graphs Placeholder */}
                     <View style={styles.section}>

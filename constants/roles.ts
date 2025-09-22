@@ -1,7 +1,7 @@
 // Expressive frontend roles for onboarding UI
 export const roles = [
   'Farmer',
-  'Fermentary Owner',
+  'FermentaryOwner',
   'Warehouse',
   'Organization',
 

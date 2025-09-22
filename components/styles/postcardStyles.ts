@@ -1,9 +1,10 @@
 import { StyleSheet } from 'react-native';
 
 export const roleColors = {
-  farmer: '#8BC34A',
-  exporter: '#03A9F4',
+  farmer: '#4CAF50',
+  exporter: '#2196F3',
   organization: '#FF9800',
+  fermentaryOwner: '#9C27B0',
 };
 
 export const styles = StyleSheet.create({

@@ -17,39 +17,79 @@ export default function PostsScreen() {
     const [editingPostId, setEditingPostId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const normalizeRole = (raw: string): ActivityPost['author']['role'] => {
+        const cleaned = raw?.trim().toLowerCase().replace(/\s+/g, '');
+        const map: Record<string, ActivityPost['author']['role']> = {
+            'farmer': 'farmer',
+            'exporter': 'exporter',
+            'organization': 'organization',
+            'fermentaryowner': 'fermentaryOwner', // ✅ handles both "Fermentary Owner" and "FermentaryOwner"
+        };
+
+        const normalized = map[cleaned];
+        if (!normalized) {
+            console.warn(`⚠️ Unrecognized role: "${raw}". Defaulting to "farmer".`);
+        }
+
+        return normalized ?? 'farmer';
+    };
+
     const fetchUser = async () => {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
             console.error('Error fetching user:', error?.message);
             return;
         }
-        // console.log('🔐 Authenticated user ID:', user.id);
         setCurrentUserId(user.id);
     };
 
     const fetchPosts = async () => {
+        console.log('📡 Fetching posts from Supabase...');
         const { data, error } = await supabase
-            .from('activity_posts_with_author')
-            .select('*')
+            .from('activity_posts')
+            .select(`
+        post_id,
+        user_id,
+        content,
+        timestamp,
+        user_profile (
+          full_name,
+          role
+        )
+      `)
             .order('timestamp', { ascending: false });
 
         if (error) {
-            console.error('Error fetching posts:', error);
+            console.error('❌ Error fetching posts:', error.message);
             return;
         }
 
-        const transformed: ActivityPost[] = (data ?? []).map((row) => ({
-            id: row.post_id,
-            timestamp: row.timestamp,
-            likedBy: row.liked_by ?? [],
-            content: row.content,
-            likes: Array.isArray(row.liked_by) ? row.liked_by.length : 0,
-            userId: row.user_id,
-            author: {
-                name: row.author_name ?? 'Unknown',
-                role: row.author_role?.trim() || 'Unknown',
-            },
-        }));
+        if (!data || data.length === 0) {
+            console.warn('⚠️ No posts retrieved.');
+            return;
+        }
+
+        console.log('✅ Raw Supabase post data:', data);
+
+        const transformed: ActivityPost[] = data.map((row) => {
+            const authorProfile = Array.isArray(row.user_profile)
+                ? row.user_profile[0]
+                : row.user_profile;
+
+            const post: ActivityPost = {
+                id: row.post_id,
+                userId: row.user_id,
+                timestamp: row.timestamp,
+                content: row.content,
+                author: {
+                    name: authorProfile?.full_name ?? 'Unknown',
+                    role: normalizeRole(authorProfile?.role ?? ''),
+                },
+            };
+
+            console.log('🧩 Transformed post:', post);
+            return post;
+        });
 
         setPosts(transformed);
         setLoading(false);
@@ -88,11 +128,6 @@ export default function PostsScreen() {
         }
     };
 
-    /**
-     * 
-     * This function handles the deletion of a post.
-     * It prompts the user for confirmation and deletes the post if confirmed. The ID of the post to delete.
-     */
     const handleDelete = async (postId: string) => {
         Alert.alert('Delete Post', 'Are you sure?', [
             { text: 'Cancel', style: 'cancel' },
@@ -117,7 +152,6 @@ export default function PostsScreen() {
         ]);
     };
 
-    // Function to handle editing a post
     const handleEdit = (postId: string) => {
         const post = posts.find((p) => p.id === postId);
         if (post) {
@@ -210,7 +244,6 @@ export default function PostsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-
         padding: 16,
     },
     input: {
