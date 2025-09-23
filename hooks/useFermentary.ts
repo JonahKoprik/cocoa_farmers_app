@@ -36,9 +36,7 @@ export function useFermentaries(llgName: string) {
         .eq("llg_name", trimmedLLG)
         .single();
 
-      if (llgError || !llgData) {
-        throw new Error("LLG not found");
-      }
+      if (llgError || !llgData) throw new Error("LLG not found");
 
       const llgId = llgData.llg_id;
 
@@ -48,11 +46,10 @@ export function useFermentaries(llgName: string) {
         .select("ward_id")
         .eq("llg_id", llgId);
 
-      if (wardError || !wardData || wardData.length === 0) {
+      if (wardError || !wardData || wardData.length === 0)
         throw new Error("No wards found for this LLG");
-      }
 
-      const wardIds = wardData.map(w => w.ward_id);
+      const wardIds = wardData.map((w) => w.ward_id);
 
       // Step 3: Fetch fermentaries in those wards
       const { data: fermentaries, error: fermentaryError } = await supabase
@@ -86,7 +83,7 @@ export function useFermentaries(llgName: string) {
         ward_name: f.ward?.ward_name ?? "",
         contact: f.contact ?? "",
         price_per_kg: typeof f.price_per_kg === "number" ? f.price_per_kg : 0,
-        updated_at: f.updated_at ?? "",
+        updated_at: f.updated_at ?? new Date().toISOString(),
         llg_name: f.ward?.llg?.llg_name ?? "",
       }));
 
@@ -104,5 +101,5 @@ export function useFermentaries(llgName: string) {
     fetchFermentaries();
   }, [fetchFermentaries]);
 
-  return { data, loading, error };
+  return { data, loading, error, refetch: fetchFermentaries };
 }
