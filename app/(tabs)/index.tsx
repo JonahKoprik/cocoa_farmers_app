@@ -13,8 +13,8 @@ import { GradientCard } from '../../components/GradientCard';
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
-import { supabase } from '../../lib/supabaseClient';
 
+import { supabase } from '../../lib/supabaseClient';
 export default function MarketPricesScreen() {
     const { globalPrices, loading, error } = usePrices();
     const { tips } = useFarmingTips();

@@ -1,5 +1,4 @@
 import { useFermentaries } from '@/hooks/useFermentary';
-import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from 'react';
 import {
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
+import { supabase } from '../../lib/supabaseClient';
 
 type LLG = { llg_name: string };
 type Category = 'Fermentary' | 'Warehouse';

@@ -21,7 +21,7 @@ export default function PostsScreen() {
         const cleaned = raw?.trim().toLowerCase().replace(/\s+/g, '');
         const map: Record<string, ActivityPost['author']['role']> = {
             'farmer': 'farmer',
-            'exporter': 'exporter',
+            'warehouse': 'warehouse',
             'organization': 'organization',
             'fermentaryowner': 'fermentaryOwner', // ✅ handles both "Fermentary Owner" and "FermentaryOwner"
         };

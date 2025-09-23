@@ -5,6 +5,6 @@ export type ActivityPost = {
   content: string;
   author: {
     name: string;
-    role: 'farmer' | 'exporter' | 'organization' | 'fermentaryOwner';
+    role: 'farmer' | 'exporter' | 'organization' | 'warehouse'| 'fermentaryOwner';
   };
 };
