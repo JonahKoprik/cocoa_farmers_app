@@ -1,527 +1,292 @@
-import { useFermentaries } from '@/hooks/useFermentary';
-import { supabase } from '@/lib/supabaseClient';
-import { Picker } from '@react-native-picker/picker';
+import { Colors } from '@/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+    Alert, Button, FlatList, StyleSheet,
+    Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
+import { ActivityPost } from '../../components/types/activityPost';
+import { createPost } from '../../lib/createPost';
+import { supabase } from '../../lib/supabaseClient';
 
-type LLG = { llg_name: string };
-type Category = 'Fermentary' | 'Warehouse';
+export default function PostsScreen() {
+    const [content, setContent] = useState('');
+    const [posts, setPosts] = useState<ActivityPost[]>([]);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [editingPostId, setEditingPostId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
+    const normalizeRole = (raw: string): ActivityPost['author']['role'] => {
+        const cleaned = raw?.trim().toLowerCase().replace(/\s+/g, '');
+        const map: Record<string, ActivityPost['author']['role']> = {
+            'farmer': 'farmer',
+            'warehouse': 'warehouse',
+            'organization': 'organization',
+            'fermentaryowner': 'fermentaryOwner', // ✅ handles both "Fermentary Owner" and "FermentaryOwner"
+        };
 
-// MarketPricesScreen.tsx
-export default function MarketPricesScreen() {
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [newPrice, setNewPrice] = useState('');
-    const [selectedLLG, setSelectedLLG] = useState('');
-    const [llgs, setLLGs] = useState<LLG[]>([]);
-    const [category, setCategory] = useState<Category>('Fermentary');
-    const [warehouses, setWarehouses] = useState<any[]>([]);
-    const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-    const [errorWarehouses, setErrorWarehouses] = useState<string | null>(null);
-    const [userRole, setUserRole] = useState<string | null>(null);
+        const normalized = map[cleaned];
+        if (!normalized) {
+            console.warn(`⚠️ Unrecognized role: "${raw}". Defaulting to "farmer".`);
+        }
 
-    const normalizedLLG = selectedLLG.trim();
-    const {
-        data: fermentaries,
-        loading: loadingFermentaries,
-        error: errorFermentaries,
-    } = useFermentaries(normalizedLLG);
+        return normalized ?? 'farmer';
+    };
+
+    const fetchUser = async () => {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+            console.error('Error fetching user:', error?.message);
+            return;
+        }
+        setCurrentUserId(user.id);
+    };
+
+    const fetchPosts = async () => {
+        console.log('📡 Fetching posts from Supabase...');
+        const { data, error } = await supabase
+            .from('activity_posts')
+            .select(`
+        post_id,
+        user_id,
+        content,
+        timestamp,
+        user_profile (
+          full_name,
+          role
+        )
+      `)
+            .order('timestamp', { ascending: false });
+
+        if (error) {
+            console.error('❌ Error fetching posts:', error.message);
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn('⚠️ No posts retrieved.');
+            return;
+        }
+
+        console.log('✅ Raw Supabase post data:', data);
+
+        const transformed: ActivityPost[] = data.map((row) => {
+            const authorProfile = Array.isArray(row.user_profile)
+                ? row.user_profile[0]
+                : row.user_profile;
+
+            const post: ActivityPost = {
+                id: row.post_id,
+                userId: row.user_id,
+                timestamp: row.timestamp,
+                content: row.content,
+                author: {
+                    name: authorProfile?.full_name ?? 'Unknown',
+                    role: normalizeRole(authorProfile?.role ?? ''),
+                },
+            };
+
+            console.log('🧩 Transformed post:', post);
+            return post;
+        });
+
+        setPosts(transformed);
+        setLoading(false);
+    };
+
+    const handleSubmit = async () => {
+        const trimmed = content.trim();
+        if (!trimmed) {
+            Alert.alert('Empty Post', 'Please enter some content before posting.');
+            return;
+        }
+
+        try {
+            if (editingPostId) {
+                const { error } = await supabase
+                    .from('activity_posts')
+                    .update({ content: trimmed })
+                    .eq('post_id', editingPostId)
+                    .eq('user_id', currentUserId);
+
+                if (error) throw error;
+
+                Alert.alert('Success', 'Post updated!');
+            } else {
+                await createPost({ content: trimmed });
+                Alert.alert('Success', 'Post created!');
+            }
+
+            setContent('');
+            setEditingPostId(null);
+            fetchPosts();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unexpected error occurred.';
+            Alert.alert('Error', message);
+            console.error('Post submission error:', message);
+        }
+    };
+
+    const handleDelete = async (postId: string) => {
+        Alert.alert('Delete Post', 'Are you sure?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    const { error } = await supabase
+                        .from('activity_posts')
+                        .delete()
+                        .eq('post_id', postId)
+                        .eq('user_id', currentUserId);
+
+                    if (error) {
+                        console.error('Error deleting post:', error.message);
+                        Alert.alert('Error', 'Failed to delete post.');
+                    } else {
+                        fetchPosts();
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleEdit = (postId: string) => {
+        const post = posts.find((p) => p.id === postId);
+        if (post) {
+            setContent(post.content);
+            setEditingPostId(postId);
+        }
+    };
 
     useEffect(() => {
-        const fetchLLGs = async () => {
-            const { data, error } = await supabase.from('llg').select('llg_name');
-            if (!error && data) setLLGs(data);
+        const init = async () => {
+            await fetchUser();
+            await fetchPosts();
         };
-
-        const fetchUserRole = async () => {
-            const { data: session } = await supabase.auth.getUser();
-            const email = session?.user?.email;
-            if (!email) return;
-
-            const { data, error } = await supabase
-                .from('user_profile')
-                .select('role')
-                .eq('email', email)
-                .single();
-
-            if (!error && data?.role) {
-                const role = data.role.trim().toLowerCase();
-                setUserRole(role);
-
-                if (['warehouse', 'organization'].includes(role)) {
-                    setCategory('Warehouse');
-                }
-            }
-        };
-
-        const fetchWarehousesFromWarehouseUsers = async () => {
-            setLoadingWarehouses(true);
-            setErrorWarehouses(null);
-
-            const { data: users, error: userError } = await supabase
-                .from('user_profile')
-                .select('province_id')
-                .ilike('role', 'warehouse');
-
-            if (userError) {
-                setErrorWarehouses('Failed to fetch warehouse-role users');
-                setLoadingWarehouses(false);
-                return;
-            }
-
-            const provinceIds = Array.from(
-                new Set(
-                    users
-                        .map((u) => typeof u.province_id === 'string' ? u.province_id.trim() : null)
-                        .filter((id): id is string => !!id && id.length > 0)
-                )
-            );
-
-            if (provinceIds.length === 0) {
-                setWarehouses([]);
-                setLoadingWarehouses(false);
-                return;
-            }
-
-            const { data: warehouseData, error: warehouseError } = await supabase
-                .from('warehouse')
-                .select('warehouse_id, warehouse_name, warehouse_price, created_at, province_id, user_id')
-                .in('province_id', provinceIds);
-
-            if (warehouseError) {
-                setErrorWarehouses('Failed to fetch warehouses');
-                setWarehouses([]);
-            } else {
-                setWarehouses(warehouseData ?? []);
-            }
-
-            setLoadingWarehouses(false);
-        };
-
-        fetchLLGs();
-        fetchUserRole();
-        fetchWarehousesFromWarehouseUsers();
+        init();
     }, []);
 
-    const renderFacilityCard = (
-        f: any,
-        index: number,
-        label: 'Fermentary' | 'Warehouse'
-    ) => (
-        <View key={index} style={styles.card}>
-            {/* Facility Name */}
-            <Text style={styles.cardText}>
-                {label} Name: {label === 'Fermentary' ? f.fermentary_name : f.warehouse_name}
-            </Text>
-
-            {/* Fermentary-specific fields */}
-            {label === 'Fermentary' && (
-                <>
-                    {f.owner_name && (
-                        <Text style={styles.cardText}>
-                            Owner: <Text style={styles.cardPrice}>{f.owner_name}</Text>
-                        </Text>
-                    )}
-                    {f.llg_name && (
-                        <Text style={styles.cardText}>
-                            LLG: <Text style={styles.cardPrice}>{f.llg_name}</Text>
-                        </Text>
-                    )}
-                    {f.ward_name && (
-                        <Text style={styles.cardText}>
-                            Village: <Text style={styles.cardPrice}>{f.ward_name}</Text>
-                        </Text>
-                    )}
-                    {f.price_per_kg != null && (
-                        <Text style={styles.cardText}>
-                            Wet Bean: <Text style={styles.cardPrice}>{f.price_per_kg.toFixed(2)} PGK/kg</Text>
-                        </Text>
-                    )}
-                </>
-            )}
-
-            {/* Warehouse-specific price */}
-            {label === 'Warehouse' && f.warehouse_price != null && (
-                <Text style={styles.cardText}>
-                    Warehouse Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/kg</Text>
-                </Text>
-            )}
-
-            {/* Updated timestamp */}
-            <Text style={styles.cardFooter}>
-                Updated: {new Date(f.updated_at || f.created_at).toLocaleDateString()}
-            </Text>
-        </View>
-    );
-
-
-    const renderCategoryToggle = () => {
-        const allowedCategories: Category[] =
-            userRole && ['warehouse', 'organization'].includes(userRole)
-                ? ['Warehouse']
-                : ['Fermentary', 'Warehouse'];
-
+    if (loading) {
         return (
-            <View style={styles.toggleContainer}>
-                {allowedCategories.map((cat) => (
-                    <TouchableOpacity
-                        key={cat}
-                        style={[styles.toggleButton, category === cat && styles.toggleButtonActive]}
-                        onPress={() => setCategory(cat)}
-                    >
-                        <Text style={[styles.toggleText, category === cat && styles.toggleTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            <SafeAreaView style={styles.container}>
+                <Text style={{ color: Colors.textPrimary }}>Loading posts...</Text>
+            </SafeAreaView>
         );
-    };
+    }
 
-    const renderPicker = () => {
-        if (category === 'Fermentary') {
-            return (
-                <>
-                    <Text style={styles.sectionTitle}>Select Your LLG</Text>
-                    <Picker style={styles.picker} selectedValue={selectedLLG} onValueChange={setSelectedLLG}>
-                        <Picker.Item label="Select LLG" value="" />
-                        {llgs.map((llg, i) => (
-                            <Picker.Item key={i} label={llg.llg_name} value={llg.llg_name} />
-                        ))}
-                    </Picker>
-                </>
-            );
-        }
-
-        if (category === 'Warehouse') {
-            return <Text style={styles.sectionTitle}>View nearby warehouses in your province</Text>;
-        }
-
-        return null;
-    };
-
-    const renderCreatePriceButton = () => {
-        if (!userRole) return null;
-
-        const isFarmer = userRole === 'farmer';
-        const isFermentaryOwner = userRole === 'fermentaryowner';
-        const isWarehouseUser = userRole === 'warehouse';
-
-        if (isFarmer) return null;
-
-        if (category === 'Fermentary' && isFermentaryOwner) {
-            return (
-                <>
-                    <TouchableOpacity
-                        style={styles.createButton}
-                        onPress={() => setShowCreateForm((prev) => !prev)}
-                    >
-                        <Text style={styles.createButtonText}>
-                            {showCreateForm ? 'Cancel' : 'Create Fermentary Price'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    {showCreateForm && (
-                        <View style={styles.formContainer}>
-                            <Text style={styles.formLabel}>Enter Price (PGK/kg):</Text>
-                            <TextInput
-                                style={styles.input}
-                                keyboardType="numeric"
-                                value={newPrice}
-                                onChangeText={setNewPrice}
-                                placeholder="e.g. 10.00"
-                            />
-                            <TouchableOpacity
-                                style={styles.submitButton}
-                                onPress={async () => {
-                                    const { data: session } = await supabase.auth.getUser();
-                                    const userId = session?.user?.id;
-                                    if (!userId) return;
-
-                                    const { data: fermentary, error: fetchError } = await supabase
-
-                                        .from('fermentary')
-                                        .select('fermentary_id')
-                                        .eq('owner_id', userId)
-                                        .single();
-
-                                    if (fetchError || !fermentary) {
-                                        console.log('Authenticated user ID:', userId);
-
-                                        console.error('Fermentary not found for user');
-                                        return;
-                                    }
-
-                                    const { error: updateError } = await supabase
-                                        .from('fermentary')
-                                        .update({ price_per_kg: parseFloat(newPrice) })
-                                        .eq('fermentary_id', fermentary.fermentary_id);
-
-                                    if (updateError) {
-                                        console.error('Failed to update price:', updateError.message);
-                                    } else {
-                                        console.log('Fermentary price updated successfully');
-                                        setShowCreateForm(false);
-                                        setNewPrice('');
-
-                                    }
-                                }}
-                            >
-                                <Text style={styles.submitButtonText}>Submit Price</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </>
-            );
-        }
-
-        if (category === 'Warehouse' && isWarehouseUser) {
-            return (
-                <>
-                    <TouchableOpacity
-                        style={styles.createButton}
-                        onPress={() => setShowCreateForm((prev) => !prev)}
-                    >
-                        <Text style={styles.createButtonText}>
-                            {showCreateForm ? 'Cancel' : 'Create Warehouse Price'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    {showCreateForm && (
-                        <View style={styles.formContainer}>
-                            <Text style={styles.formLabel}>Enter Price (PGK/kg):</Text>
-                            <TextInput
-                                style={styles.input}
-                                keyboardType="numeric"
-                                value={newPrice}
-                                onChangeText={setNewPrice}
-                                placeholder="e.g. 12.50"
-                            />
-                            <TouchableOpacity
-                                style={styles.submitButton}
-                                onPress={async () => {
-                                    console.log('🔄 Submit button pressed');
-                                    console.log('Entered price:', newPrice);
-
-                                    const parsedPrice = parseFloat(newPrice);
-                                    if (isNaN(parsedPrice)) {
-                                        console.error('❌ Invalid price input');
-                                        return;
-                                    }
-
-                                    const { data: session, error: sessionError } = await supabase.auth.getUser();
-                                    if (sessionError) {
-                                        console.error('❌ Failed to get user session:', sessionError.message);
-                                        return;
-                                    }
-
-                                    const userId = session?.user?.id;
-                                    console.log('✅ Authenticated user ID:', userId);
-                                    if (!userId) {
-                                        console.error('❌ No user ID found');
-                                        return;
-                                    }
-
-                                    const { data: warehouse, error: fetchError } = await supabase
-                                        .from('warehouse')
-                                        .select('warehouse_id')
-                                        .eq('user_id', userId)
-                                        .single();
-
-                                    if (fetchError) {
-                                        console.error('❌ Error fetching warehouse:', fetchError.message);
-                                        return;
-                                    }
-
-                                    if (!warehouse) {
-                                        console.warn('⚠️ No warehouse found for user:', userId);
-                                        return;
-                                    }
-
-                                    console.log('🏢 Found warehouse:', warehouse.warehouse_id);
-
-                                    const { error: updateError } = await supabase
-                                        .from('warehouse')
-                                        .update({ warehouse_price: parsedPrice })
-                                        .eq('warehouse_id', warehouse.warehouse_id);
-
-                                    if (updateError) {
-                                        console.error('❌ Failed to update warehouse price:', updateError.message);
-                                    } else {
-                                        console.log('✅ Warehouse price updated successfully');
-                                        setShowCreateForm(false);
-                                        setNewPrice('');
-                                    }
-                                }}
-                            >
-                                <Text style={styles.submitButtonText}>Submit Price</Text>
-                            </TouchableOpacity>
-
-
-                        </View>
-                    )}
-                </>
-            );
-        }
-
-        return null;
-    };
-
-    const renderContent = () => {
-        if (category === 'Fermentary') {
-            if (!normalizedLLG) return <Text style={styles.loadingText}>Please select an LLG to view fermentaries.</Text>;
-            if (loadingFermentaries) return <Text style={styles.loadingText}>Loading fermentaries...</Text>;
-            if (errorFermentaries) return <Text style={styles.errorText}>Error: {errorFermentaries}</Text>;
-            if (fermentaries.length === 0) return <Text style={styles.loadingText}>No fermentaries found.</Text>;
-            return fermentaries.map((f, i) => renderFacilityCard(f, i, 'Fermentary'));
-        }
-
-        if (category === 'Warehouse') {
-            if (loadingWarehouses) return <Text style={styles.loadingText}>Loading warehouses...</Text>;
-            if (errorWarehouses) return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;
-            if (warehouses.length === 0) return <Text style={styles.loadingText}>No warehouses found.</Text>;
-            return warehouses.map((w, i) => renderFacilityCard(w, i, 'Warehouse'));
-        }
-
-        return null;
-    };
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.backgroundPrimary }}>
-            <View style={styles.container}>
-                {renderCategoryToggle()}
-                {renderPicker()}
-                {renderCreatePriceButton()}
-                <View style={{ flex: 1 }}>
-                    {renderContent()}
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1 }}>
+                <View style={styles.container}>
+                    <TextInput
+                        value={content}
+                        onChangeText={setContent}
+                        placeholder="What's happening?"
+                        style={styles.input}
+                        placeholderTextColor={Colors.textPrimary}
+                    />
+                    <Button
+                        title={editingPostId ? 'Update Post' : 'Post'}
+                        color={Colors.actionPrimary}
+                        onPress={handleSubmit}
+                    />
+                    {editingPostId && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                setContent('');
+                                setEditingPostId(null);
+                            }}
+                            style={{ marginTop: 8 }}
+                        >
+                            <Text style={{ color: Colors.actionPrimary }}>Cancel Edit</Text>
+                        </TouchableOpacity>
+                    )}
 
+                    <FlatList
+                        data={posts}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => {
+                            const isOwner = currentUserId && item.userId === currentUserId;
+
+                            return (
+                                <View style={styles.postCard}>
+                                    <Text style={styles.author}>
+                                        {item.author.name} · {item.author.role.toUpperCase()}
+                                    </Text>
+                                    <Text style={styles.content}>{item.content}</Text>
+                                    <Text style={styles.timestamp}>
+                                        {new Date(item.timestamp).toLocaleString()}
+                                    </Text>
+
+                                    {isOwner && (
+                                        <View style={styles.actionRow}>
+                                            <TouchableOpacity onPress={() => handleEdit(item.id)} style={styles.actionButton}>
+                                                <Text style={styles.actionText}>Edit</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
+                                                <Text style={styles.actionText}>Delete</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        }}
+                        contentContainerStyle={{ paddingTop: 16 }}
+                    />
                 </View>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    scrollContent: {
-        paddingVertical: 16,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: Colors.backgroundSecondary,
-        paddingHorizontal: 16,
-        marginBottom: 12,
-    },
-    picker: {
-        backgroundColor: Colors.backgroundSecondary,
-        marginHorizontal: 16,
-        marginBottom: 16,
-        color: Colors.textPrimary,
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    toggleButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 24,
-        marginHorizontal: 8,
-        borderRadius: 20,
-        backgroundColor: Colors.backgroundSecondary,
-    },
-    toggleButtonActive: {
-        backgroundColor: Colors.actionPrimary,
-    },
-    toggleText: {
-        color: Colors.textPrimary,
-        fontWeight: 'bold',
-    },
-    toggleTextActive: {
-        color: Colors.backgroundSecondary,
-    }, formContainer: {
-        backgroundColor: '#fff',
         padding: 16,
-        borderRadius: 8,
-        marginVertical: 10,
-    },
-    formLabel: {
-        fontSize: 16,
-        marginBottom: 8,
-        color: '#333',
     },
     input: {
+        color: Colors.textPrimary,
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 6,
-        padding: 10,
-        marginBottom: 12,
-    },
-    submitButton: {
-        backgroundColor: Colors.actionPrimary,
         padding: 12,
         borderRadius: 8,
-        alignItems: 'center',
-    },
-    submitButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-
-    errorText: {
-        color: 'red',
-        marginHorizontal: 16,
         marginBottom: 12,
     },
-    loadingText: {
-        color: Colors.textPrimary,
-        marginHorizontal: 16,
-        marginBottom: 12,
-    },
-    card: {
-        padding: 16,
-        backgroundColor: Colors.backgroundSecondary,
-        marginHorizontal: 16,
-        marginBottom: 12,
+    postCard: {
+        backgroundColor: '#fff',
+        padding: 12,
         borderRadius: 8,
+        marginBottom: 12,
+        borderColor: '#ddd',
+        borderWidth: 1,
     },
-
-
-
-    cardText: {
-        fontSize: 14,
-        color: Colors.textPrimary,
-        marginBottom: 2,
-    },
-    cardPrice: {
+    author: {
         fontWeight: 'bold',
-        color: Colors.actionPrimary,
+        marginBottom: 4,
     },
-    cardFooter: {
+    content: {
+        marginBottom: 6,
+    },
+    timestamp: {
         fontSize: 12,
-        color: Colors.textSecondary,
+        color: '#666',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
         marginTop: 8,
     },
-    createButton: {
+    actionButton: {
+        marginLeft: 12,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
         backgroundColor: Colors.actionPrimary,
-        padding: 12,
-        marginVertical: 10,
-        borderRadius: 8,
-        alignItems: 'center',
+        borderRadius: 4,
     },
-    createButtonText: {
+    actionText: {
         color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 14,
     },
-
 });

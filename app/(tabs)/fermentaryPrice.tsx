@@ -1,4 +1,5 @@
 import { useFermentaries } from '@/hooks/useFermentary';
+import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from 'react';
 import {
@@ -10,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
-import { supabase } from '../../lib/supabaseClient';
 
 type LLG = { llg_name: string };
 type Category = 'Fermentary' | 'Warehouse';
@@ -111,22 +111,57 @@ export default function MarketPricesScreen() {
         fetchWarehousesFromWarehouseUsers();
     }, []);
 
-    const renderFacilityCard = (f: any, index: number, label: 'Fermentary' | 'Warehouse') => (
+    const renderFacilityCard = (
+        f: any,
+        index: number,
+        label: 'Fermentary' | 'Warehouse'
+    ) => (
         <View key={index} style={styles.card}>
-            <Text style={styles.cardText}>{label} Name: {f.name || f.warehouse_name}</Text>
-            <Text style={styles.cardText}>Contact: {f.contact || 'N/A'}</Text>
-            <Text style={styles.cardText}>Owner: {f.owner_name || 'Unknown'}</Text>
-            <Text style={styles.cardText}>Ward: {f.ward_name || 'N/A'}</Text>
-            <Text style={styles.cardText}>LLG: {f.llg_name || 'N/A'}</Text>
-            {f.price_per_kg != null && (
-                <Text>Wet Bean: <Text style={styles.cardPrice}>{f.price_per_kg.toFixed(2)} PGK/kg</Text></Text>
+            {/* Facility Name */}
+            <Text style={styles.cardText}>
+                {label} Name: {label === 'Fermentary' ? f.fermentary_name : f.warehouse_name}
+            </Text>
+
+            {/* Fermentary-specific fields */}
+            {label === 'Fermentary' && (
+                <>
+                    {f.owner_name && (
+                        <Text style={styles.cardText}>
+                            Owner: <Text style={styles.cardPrice}>{f.owner_name}</Text>
+                        </Text>
+                    )}
+                    {f.llg_name && (
+                        <Text style={styles.cardText}>
+                            LLG: <Text style={styles.cardPrice}>{f.llg_name}</Text>
+                        </Text>
+                    )}
+                    {f.ward_name && (
+                        <Text style={styles.cardText}>
+                            Village: <Text style={styles.cardPrice}>{f.ward_name}</Text>
+                        </Text>
+                    )}
+                    {f.price_per_kg != null && (
+                        <Text style={styles.cardText}>
+                            Wet Bean: <Text style={styles.cardPrice}>{f.price_per_kg.toFixed(2)} PGK/kg</Text>
+                        </Text>
+                    )}
+                </>
             )}
-            {f.warehouse_price != null && (
-                <Text>Warehouse Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/kg</Text></Text>
+
+            {/* Warehouse-specific price */}
+            {label === 'Warehouse' && f.warehouse_price != null && (
+                <Text style={styles.cardText}>
+                    Warehouse Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/kg</Text>
+                </Text>
             )}
-            <Text style={styles.cardFooter}>Updated: {new Date(f.updated_at || f.created_at).toLocaleDateString()}</Text>
+
+            {/* Updated timestamp */}
+            <Text style={styles.cardFooter}>
+                Updated: {new Date(f.updated_at || f.created_at).toLocaleDateString()}
+            </Text>
         </View>
     );
+
 
     const renderCategoryToggle = () => {
         const allowedCategories: Category[] =
@@ -182,9 +217,67 @@ export default function MarketPricesScreen() {
 
         if (category === 'Fermentary' && isFermentaryOwner) {
             return (
-                <TouchableOpacity style={styles.createButton} onPress={() => console.log('Create Fermentary Price')}>
-                    <Text style={styles.createButtonText}>Create Fermentary Price</Text>
-                </TouchableOpacity>
+                <>
+                    <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={() => setShowCreateForm((prev) => !prev)}
+                    >
+                        <Text style={styles.createButtonText}>
+                            {showCreateForm ? 'Cancel' : 'Create Fermentary Price'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {showCreateForm && (
+                        <View style={styles.formContainer}>
+                            <Text style={styles.formLabel}>Enter Price (PGK/kg):</Text>
+                            <TextInput
+                                style={styles.input}
+                                keyboardType="numeric"
+                                value={newPrice}
+                                onChangeText={setNewPrice}
+                                placeholder="e.g. 10.00"
+                            />
+                            <TouchableOpacity
+                                style={styles.submitButton}
+                                onPress={async () => {
+                                    const { data: session } = await supabase.auth.getUser();
+                                    const userId = session?.user?.id;
+                                    if (!userId) return;
+
+                                    const { data: fermentary, error: fetchError } = await supabase
+
+                                        .from('fermentary')
+                                        .select('fermentary_id')
+                                        .eq('owner_id', userId)
+                                        .single();
+
+                                    if (fetchError || !fermentary) {
+                                        console.log('Authenticated user ID:', userId);
+
+                                        console.error('Fermentary not found for user');
+                                        return;
+                                    }
+
+                                    const { error: updateError } = await supabase
+                                        .from('fermentary')
+                                        .update({ price_per_kg: parseFloat(newPrice) })
+                                        .eq('fermentary_id', fermentary.fermentary_id);
+
+                                    if (updateError) {
+                                        console.error('Failed to update price:', updateError.message);
+                                    } else {
+                                        console.log('Fermentary price updated successfully');
+                                        setShowCreateForm(false);
+                                        setNewPrice('');
+
+                                    }
+                                }}
+                            >
+                                <Text style={styles.submitButtonText}>Submit Price</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
             );
         }
 
@@ -212,15 +305,65 @@ export default function MarketPricesScreen() {
                             />
                             <TouchableOpacity
                                 style={styles.submitButton}
-                                onPress={() => {
-                                    console.log('Submitted price:', newPrice);
-                                    // TODO: Add Supabase insert logic here
-                                    setShowCreateForm(false);
-                                    setNewPrice('');
+                                onPress={async () => {
+                                    console.log('🔄 Submit button pressed');
+                                    console.log('Entered price:', newPrice);
+
+                                    const parsedPrice = parseFloat(newPrice);
+                                    if (isNaN(parsedPrice)) {
+                                        console.error('❌ Invalid price input');
+                                        return;
+                                    }
+
+                                    const { data: session, error: sessionError } = await supabase.auth.getUser();
+                                    if (sessionError) {
+                                        console.error('❌ Failed to get user session:', sessionError.message);
+                                        return;
+                                    }
+
+                                    const userId = session?.user?.id;
+                                    console.log('✅ Authenticated user ID:', userId);
+                                    if (!userId) {
+                                        console.error('❌ No user ID found');
+                                        return;
+                                    }
+
+                                    const { data: warehouse, error: fetchError } = await supabase
+                                        .from('warehouse')
+                                        .select('warehouse_id')
+                                        .eq('user_id', userId)
+                                        .single();
+
+                                    if (fetchError) {
+                                        console.error('❌ Error fetching warehouse:', fetchError.message);
+                                        return;
+                                    }
+
+                                    if (!warehouse) {
+                                        console.warn('⚠️ No warehouse found for user:', userId);
+                                        return;
+                                    }
+
+                                    console.log('🏢 Found warehouse:', warehouse.warehouse_id);
+
+                                    const { error: updateError } = await supabase
+                                        .from('warehouse')
+                                        .update({ warehouse_price: parsedPrice })
+                                        .eq('warehouse_id', warehouse.warehouse_id);
+
+                                    if (updateError) {
+                                        console.error('❌ Failed to update warehouse price:', updateError.message);
+                                    } else {
+                                        console.log('✅ Warehouse price updated successfully');
+                                        setShowCreateForm(false);
+                                        setNewPrice('');
+                                    }
                                 }}
                             >
                                 <Text style={styles.submitButtonText}>Submit Price</Text>
                             </TouchableOpacity>
+
+
                         </View>
                     )}
                 </>
