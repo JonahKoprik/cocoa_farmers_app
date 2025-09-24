@@ -20,17 +20,15 @@ export default function PostsScreen() {
     const normalizeRole = (raw: string): ActivityPost['author']['role'] => {
         const cleaned = raw?.trim().toLowerCase().replace(/\s+/g, '');
         const map: Record<string, ActivityPost['author']['role']> = {
-            'farmer': 'farmer',
-            'exporter': 'exporter',
-            'organization': 'organization',
-            'fermentaryowner': 'fermentaryOwner', // ✅ handles both "Fermentary Owner" and "FermentaryOwner"
+            farmer: 'farmer',
+            warehouse: 'warehouse',
+            organization: 'organization',
+            fermentaryowner: 'fermentaryOwner',
         };
-
         const normalized = map[cleaned];
         if (!normalized) {
             console.warn(`⚠️ Unrecognized role: "${raw}". Defaulting to "farmer".`);
         }
-
         return normalized ?? 'farmer';
     };
 
@@ -54,7 +52,8 @@ export default function PostsScreen() {
         timestamp,
         user_profile (
           full_name,
-          role
+          role,
+          organization_name
         )
       `)
             .order('timestamp', { ascending: false });
@@ -76,14 +75,25 @@ export default function PostsScreen() {
                 ? row.user_profile[0]
                 : row.user_profile;
 
+            const role = normalizeRole(authorProfile?.role ?? '');
+
+            const name =
+                role === 'warehouse'
+                    ? authorProfile?.organization_name?.trim() || authorProfile?.full_name?.trim() || 'Unnamed Warehouse'
+                    : authorProfile?.full_name?.trim() || authorProfile?.organization_name?.trim() || 'Unnamed User';
+
+            if (!name || name === '') {
+                console.warn(`⚠️ Missing display name for user ${row.user_id} with role ${role}`);
+            }
+
             const post: ActivityPost = {
                 id: row.post_id,
                 userId: row.user_id,
                 timestamp: row.timestamp,
                 content: row.content,
                 author: {
-                    name: authorProfile?.full_name ?? 'Unknown',
-                    role: normalizeRole(authorProfile?.role ?? ''),
+                    name,
+                    role,
                 },
             };
 
@@ -287,6 +297,6 @@ const styles = StyleSheet.create({
     },
     actionText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 12,
     },
 });
