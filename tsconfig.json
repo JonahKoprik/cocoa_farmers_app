@@ -18,7 +18,9 @@
       ]
     }
   },
+  
   "include": [
+    
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
