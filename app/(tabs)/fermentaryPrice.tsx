@@ -1,6 +1,8 @@
 import { useFermentaries } from '@/hooks/useFermentary';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
+
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
     StyleSheet,
@@ -151,7 +153,7 @@ export default function MarketPricesScreen() {
             {/* Warehouse-specific price */}
             {label === 'Warehouse' && f.warehouse_price != null && (
                 <Text style={styles.cardText}>
-                    Warehouse Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/kg</Text>
+                    Dried Bean Price: <Text style={styles.cardPrice}>{f.warehouse_price.toFixed(2)} PGK/bag</Text>
                 </Text>
             )}
 
@@ -392,17 +394,19 @@ export default function MarketPricesScreen() {
         return null;
     };
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.backgroundPrimary }}>
-            <View style={styles.container}>
-                {renderCategoryToggle()}
-                {renderPicker()}
-                {renderCreatePriceButton()}
-                <View style={{ flex: 1 }}>
-                    {renderContent()}
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.container}>
+                    {renderCategoryToggle()}
+                    {renderPicker()}
+                    {renderCreatePriceButton()}
+                    <View style={{ flex: 1 }}>
+                        {renderContent()}
 
+                    </View>
                 </View>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 

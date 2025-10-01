@@ -60,6 +60,7 @@ export default function PostsScreen() {
 
         if (error) {
             console.error('❌ Error fetching posts:', error.message);
+
             return;
         }
 

@@ -13,12 +13,17 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "./",
     "paths": {
+      "@services/*": [
+        "services/*"
+      ],
       "@/*": [
         "./*"
       ]
     }
   },
+  
   "include": [
+    
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
