@@ -1,8 +1,9 @@
 import { Colors } from '@/constants/colors';
 import { supabase } from '@/lib/supabaseClient';
+import { registerPushToken } from '@/services/pushService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -19,7 +20,6 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -39,34 +39,46 @@ const Login = () => {
     }, []);
 
     const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            Alert.alert('Missing Fields', 'Please enter both email and password.');
+            return;
+        }
+
         setLoading(true);
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+            if (error || !data.session || !data.user?.id) {
+                console.warn('⚠️ Session missing or user ID undefined');
+                router.replace('/(fallback)/offlineLoginFallback'); // 🔁 Redirect to fallback screen
+                return;
+            }
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            await registerPushToken(data.user.id, profile?.role);
+
+            await supabase.from('login_log').insert({
+                user_id: data.user.id,
                 email,
-                password,
+                timestamp: new Date().toISOString(),
+                success: true,
             });
 
-            if (error) {
-                const msg = error.message.toLowerCase();
-                if (msg.includes('email') && msg.includes('confirm')) {
-                    Alert.alert(
-                        'Email Not Confirmed',
-                        'Please check your email and confirm your account before logging in.'
-                    );
-                } else {
-                    Alert.alert('Login Failed', error.message);
-                }
-            } else if (data.session) {
-                Alert.alert('Login Successful');
-                router.replace('/');
-            }
+            Alert.alert('Login Successful');
+            router.replace('/');
         } catch (err) {
-            Alert.alert('Error', 'An unexpected error occurred');
-            console.error(err);
+            console.error('Login error:', err);
+            router.replace('/(fallback)/offlineLoginFallback'); // 🔁 Redirect on unexpected error
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
@@ -119,6 +131,8 @@ const Login = () => {
 
 export default Login;
 
+
+// Styles remain unchanged
 const styles = StyleSheet.create({
     container: {
         flex: 1,
