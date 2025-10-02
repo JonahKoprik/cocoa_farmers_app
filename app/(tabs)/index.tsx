@@ -45,8 +45,9 @@ export default function MarketPricesScreen() {
                     .eq('province_id', provinceId),
 
                 supabase
-                    .from('fermentary')
+                    .from('user_profile')
                     .select('*', { count: 'exact', head: true })
+                    .eq('role', 'FermentaryOwner')
                     .eq('province_id', provinceId),
 
                 supabase
@@ -75,7 +76,7 @@ export default function MarketPricesScreen() {
         ]
         : [];
 
-    const recommendedTips = tips.slice(0, 5);
+    // const recommendedTips = tips.slice(0, 5);
 
     return (
         <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
