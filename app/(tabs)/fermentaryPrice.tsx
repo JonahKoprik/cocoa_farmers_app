@@ -362,7 +362,7 @@ export default function MarketPricesScreen() {
                                     }
                                 }}
                             >
-                                <Text style={styles.submitButtonText}>Submit Price</Text>
+                                <Text style={styles.submitButtonText}>Publish Price</Text>
                             </TouchableOpacity>
 
 
@@ -383,7 +383,7 @@ export default function MarketPricesScreen() {
             if (fermentaries.length === 0) return <Text style={styles.loadingText}>No fermentaries found.</Text>;
             return fermentaries.map((f, i) => renderFacilityCard(f, i, 'Fermentary'));
         }
-
+        // check for warehouse category 
         if (category === 'Warehouse') {
             if (loadingWarehouses) return <Text style={styles.loadingText}>Loading warehouses...</Text>;
             if (errorWarehouses) return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;
