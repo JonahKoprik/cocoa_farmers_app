@@ -1,6 +1,7 @@
 import { useFermentaries } from '@/hooks/useFermentary';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
+import { ToastAndroid } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
@@ -14,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 
-type LLG = { llg_name: string };
+type Ward = { ward_name: string };
 type Category = 'Fermentary' | 'Warehouse';
 
 
@@ -22,25 +23,52 @@ type Category = 'Fermentary' | 'Warehouse';
 export default function MarketPricesScreen() {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newPrice, setNewPrice] = useState('');
-    const [selectedLLG, setSelectedLLG] = useState('');
-    const [llgs, setLLGs] = useState<LLG[]>([]);
+    const [selectedWard, setSelectedWard] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [wards, setWards] = useState<Ward[]>([]);
     const [category, setCategory] = useState<Category>('Fermentary');
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loadingWarehouses, setLoadingWarehouses] = useState(false);
     const [errorWarehouses, setErrorWarehouses] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
 
-    const normalizedLLG = selectedLLG.trim();
+    const normalizedLLG = selectedWard.trim();
     const {
         data: fermentaries,
         loading: loadingFermentaries,
         error: errorFermentaries,
     } = useFermentaries(normalizedLLG);
-
+    /***
+     * * Fetch wards for the user's LLG and user role to determine access
+     */
     useEffect(() => {
-        const fetchLLGs = async () => {
-            const { data, error } = await supabase.from('llg').select('llg_name');
-            if (!error && data) setLLGs(data);
+        const fetchWards = async () => {
+            try {
+                const { data: session } = await supabase.auth.getUser();
+                const email = session?.user?.email;
+                if (!email) return;
+
+                const { data: userData, error: userError } = await supabase
+                    .from("user_profile")
+                    .select("llg_id")
+                    .eq("email", email)
+                    .single();
+
+                const llgId = userData?.llg_id?.trim();
+                if (userError || !llgId) return;
+
+                const { data: wardData, error: wardError } = await supabase
+                    .from("ward")
+                    .select("ward_name")
+                    .eq("llg_id", llgId);
+
+                const cleaned = wardData
+                    ?.map((w) => ({ ward_name: w.ward_name?.trim() }))
+                    .filter((w): w is Ward => !!w.ward_name);
+                setWards(cleaned ?? []);
+            } catch (error) {
+                console.error("Error fetching wards:", error);
+            }
         };
 
         const fetchUserRole = async () => {
@@ -64,6 +92,8 @@ export default function MarketPricesScreen() {
             }
         };
 
+
+
         const fetchWarehousesFromWarehouseUsers = async () => {
             setLoadingWarehouses(true);
             setErrorWarehouses(null);
@@ -73,7 +103,7 @@ export default function MarketPricesScreen() {
                 .select('province_id')
                 .ilike('role', 'warehouse');
 
-            if (userError) {
+            if (userError || !users) {
                 setErrorWarehouses('Failed to fetch warehouse-role users');
                 setLoadingWarehouses(false);
                 return;
@@ -81,7 +111,7 @@ export default function MarketPricesScreen() {
 
             const provinceIds = Array.from(
                 new Set(
-                    users
+                    (users ?? [])
                         .map((u) => typeof u.province_id === 'string' ? u.province_id.trim() : null)
                         .filter((id): id is string => !!id && id.length > 0)
                 )
@@ -108,11 +138,20 @@ export default function MarketPricesScreen() {
             setLoadingWarehouses(false);
         };
 
-        fetchLLGs();
+        fetchWards();
         fetchUserRole();
-        fetchWarehousesFromWarehouseUsers();
-    }, []);
 
+        fetchWarehousesFromWarehouseUsers();
+    }, [selectedWard, category, refreshKey]);
+
+
+    /**
+     * 
+     * @param f 
+     * @param index 
+     * @param label 
+     * @returns 
+     */
     const renderFacilityCard = (
         f: any,
         index: number,
@@ -185,16 +224,16 @@ export default function MarketPricesScreen() {
             </View>
         );
     };
-
+    /**Filtering fermentaries of a LLG based on the ward/Village of the user */
     const renderPicker = () => {
         if (category === 'Fermentary') {
             return (
                 <>
-                    <Text style={styles.sectionTitle}>Select Your LLG</Text>
-                    <Picker style={styles.picker} selectedValue={selectedLLG} onValueChange={setSelectedLLG}>
-                        <Picker.Item label="Select LLG" value="" />
-                        {llgs.map((llg, i) => (
-                            <Picker.Item key={i} label={llg.llg_name} value={llg.llg_name} />
+                    <Text style={styles.sectionTitle}>Select Your Village</Text>
+                    <Picker style={styles.picker} selectedValue={selectedWard} onValueChange={setSelectedWard}>
+                        <Picker.Item label="Select Ward" value="" />
+                        {wards.map((ward, i) => (
+                            <Picker.Item key={i} label={ward.ward_name} value={ward.ward_name} />
                         ))}
                     </Picker>
                 </>
@@ -202,11 +241,12 @@ export default function MarketPricesScreen() {
         }
 
         if (category === 'Warehouse') {
-            return <Text style={styles.sectionTitle}>View nearby warehouses in your province</Text>;
+            return <Text style={styles.sectionTitle}>Warehouses in your province</Text>;
         }
 
         return null;
     };
+
 
     const renderCreatePriceButton = () => {
         if (!userRole) return null;
@@ -271,6 +311,9 @@ export default function MarketPricesScreen() {
                                         console.log('Fermentary price updated successfully');
                                         setShowCreateForm(false);
                                         setNewPrice('');
+                                        setRefreshKey((prev) => prev + 1); // Trigger data refresh
+                                        ToastAndroid.show('Price updated successfully', ToastAndroid.SHORT);
+
 
                                     }
                                 }}
@@ -359,10 +402,12 @@ export default function MarketPricesScreen() {
                                         console.log('✅ Warehouse price updated successfully');
                                         setShowCreateForm(false);
                                         setNewPrice('');
+                                        setRefreshKey((prev) => prev + 1); // Trigger data refresh
+                                        ToastAndroid.show('Price updated successfully', ToastAndroid.SHORT);
                                     }
                                 }}
                             >
-                                <Text style={styles.submitButtonText}>Publish Price</Text>
+                                <Text style={styles.submitButtonText}>Submit Price</Text>
                             </TouchableOpacity>
 
 
@@ -383,7 +428,7 @@ export default function MarketPricesScreen() {
             if (fermentaries.length === 0) return <Text style={styles.loadingText}>No fermentaries found.</Text>;
             return fermentaries.map((f, i) => renderFacilityCard(f, i, 'Fermentary'));
         }
-        // check for warehouse category 
+
         if (category === 'Warehouse') {
             if (loadingWarehouses) return <Text style={styles.loadingText}>Loading warehouses...</Text>;
             if (errorWarehouses) return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;

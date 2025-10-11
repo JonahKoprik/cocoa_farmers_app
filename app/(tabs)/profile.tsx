@@ -2,7 +2,6 @@ import { Colors } from '@/constants/colors';
 import { useUser } from '@/context/UserContext';
 import { supabase } from '@/lib/supabaseClient';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
 import {
     Alert,
     Button,

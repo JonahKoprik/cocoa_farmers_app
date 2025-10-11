@@ -3,7 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
     Alert, Button, FlatList, StyleSheet,
-    Text, TextInput, TouchableOpacity, View,
+    Text, TextInput,
+    ToastAndroid,
+    TouchableOpacity, View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityPost } from '../../components/types/activityPost';
@@ -123,10 +125,11 @@ export default function PostsScreen() {
 
                 if (error) throw error;
 
-                Alert.alert('Success', 'Post updated!');
+                ToastAndroid.show('updated successfully', ToastAndroid.SHORT);
             } else {
                 await createPost({ content: trimmed });
-                Alert.alert('Success', 'Post created!');
+                ToastAndroid.show('Post Created successfully', ToastAndroid.SHORT);
+
             }
 
             setContent('');
@@ -154,7 +157,9 @@ export default function PostsScreen() {
 
                     if (error) {
                         console.error('Error deleting post:', error.message);
+                        ToastAndroid.show('Failed to delete post.', ToastAndroid.SHORT);
                         Alert.alert('Error', 'Failed to delete post.');
+
                     } else {
                         fetchPosts();
                     }
@@ -168,9 +173,13 @@ export default function PostsScreen() {
         if (post) {
             setContent(post.content);
             setEditingPostId(postId);
-        }
-    };
 
+        }
+
+    };
+    /**
+     * Initial data fetch on component mount
+     */
     useEffect(() => {
         const init = async () => {
             await fetchUser();
