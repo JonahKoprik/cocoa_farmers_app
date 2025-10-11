@@ -104,9 +104,9 @@ export default function MarketPricesScreen() {
                         />
                     </View>
 
-                    {/* 🧮 Province Stats */}
+                    {/* Province Stats */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>📍 Province Overview</Text>
+                        <Text style={styles.sectionTitle}> Province Statistic Overview</Text>
                         <View style={styles.statCard}>
                             <Text style={styles.statLabel}>Farmers</Text>
                             <Text style={styles.statValue}>{farmerCount}</Text>
@@ -124,7 +124,7 @@ export default function MarketPricesScreen() {
 
                     {/* 🔷 Graphs Placeholder */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>📊 Graphs</Text>
+                        <Text style={styles.sectionTitle}>Graphs & Trends</Text>
                         <View style={styles.graphPlaceholder}>
                             <Text style={styles.emptyText}>
                                 Coming soon: cocoa trends & activity graphs

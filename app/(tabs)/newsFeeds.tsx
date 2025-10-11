@@ -39,6 +39,7 @@ const fallbackGlobal: GlobalNewsArticle[] = [
 export default function NewsFeedScreen() {
     const [globalNews, setGlobalNews] = useState<GlobalNewsArticle[]>([]);
     const [refreshingGlobal, setRefreshingGlobal] = useState(false);
+    const [activeTab, setActiveTab] = useState<'global' | 'local'>('local');
 
     const {
         articles: localNews,
@@ -104,64 +105,85 @@ export default function NewsFeedScreen() {
                         />
                     }
                 >
+                    {/* Tab Buttons */}
+                    <View style={styles.tabContainer}>
+
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'local' && styles.activeTab]}
+                            onPress={() => setActiveTab('local')}
+                        >
+                            <Text style={styles.tabText}>Local News</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'global' && styles.activeTab]}
+                            onPress={() => setActiveTab('global')}
+                        >
+                            <Text style={styles.tabText}>Global News</Text>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* Global News Section */}
-                    <Text style={styles.sectionTitle}>Global News</Text>
-                    <FlatList
-                        data={globalNews}
-                        keyExtractor={(item, index) => index.toString()}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalList}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    if (item.url && typeof item.url === 'string') {
-                                        Linking.openURL(item.url);
-                                    }
-                                }}
-                            >
-                                <LinearGradient
-                                    colors={['#ded6cbff', '#ded6cbff', '#ded6cbff'] as const}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.card}
-                                >
-                                    <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                    <Text style={styles.body} numberOfLines={3} ellipsizeMode="tail">
-                                        {item.description || 'No summary available.'}
-                                    </Text>
-                                    <Text style={styles.link}>View More</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        )}
-                    />
+                    {activeTab === 'global' && (
+                        <>
+                            <Text style={styles.sectionTitle}>Global News</Text>
+                            <FlatList
+                                data={globalNews}
+                                keyExtractor={(item, index) => index.toString()}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.horizontalList}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        onPress={() => item.url && Linking.openURL(item.url)}
+                                    >
+                                        <LinearGradient
+                                            colors={['#ded6cbff', '#ded6cbff', '#ded6cbff']}
+                                            style={styles.card}
+                                        >
+                                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                            <Text style={styles.body} numberOfLines={3}>
+                                                {item.description || 'No summary available.'}
+                                            </Text>
+                                            <Text style={styles.link}>View More</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+
+                                )}
+                            />
+                        </>
+                    )}
 
                     {/* Local News Section */}
-                    <Text style={styles.sectionTitle}>Local News</Text>
-                    <View style={styles.verticalList}>
-                        {localNews.map((item) => {
-                            const link = item.url ?? item.source;
-                            if (!link || typeof link !== 'string' || !link.startsWith('http')) return null;
+                    {activeTab === 'local' && (
+                        <>
+                            <Text style={styles.sectionTitle}>Local News</Text>
+                            <View style={styles.verticalList}>
+                                {localNews.map((item) => {
+                                    const link = item.url ?? item.source;
+                                    if (!link || !link.startsWith('http')) return null;
 
-                            return (
-                                <TouchableOpacity key={item.id} onPress={() => Linking.openURL(link)}>
-                                    <View style={styles.verticalCard}>
-                                        <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                                        <Text style={styles.body} numberOfLines={3} ellipsizeMode="tail">
-                                            {item.summary ?? 'No summary available.'}
-                                        </Text>
-                                        <Text style={styles.link}>View More</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
+                                    return (
+                                        <TouchableOpacity key={item.id} onPress={() => Linking.openURL(link)}>
+                                            <View style={styles.verticalCard}>
+                                                <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                                <Text style={styles.body} numberOfLines={3}>
+                                                    {item.summary ?? 'No summary available.'}
+                                                </Text>
+                                                <Text style={styles.link}>View More</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </>
+                    )}
                 </ScrollView>
             </SafeAreaView>
         </LinearGradient>
     );
 }
-//Styles for this page
+
+// Styles
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -214,5 +236,24 @@ const styles = StyleSheet.create({
         color: Colors.actionPrimary,
         fontSize: 14,
         fontWeight: '500',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    tabButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: '#ccc',
+        marginHorizontal: 8,
+    },
+    activeTab: {
+        backgroundColor: Colors.actionPrimary,
+    },
+    tabText: {
+        color: '#fff',
+        fontWeight: '600',
     },
 });

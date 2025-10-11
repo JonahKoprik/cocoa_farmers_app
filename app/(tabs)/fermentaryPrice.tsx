@@ -26,11 +26,15 @@ export default function MarketPricesScreen() {
     const [selectedWard, setSelectedWard] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const [wards, setWards] = useState<Ward[]>([]);
+    const [prices, setPrices] = useState<any[]>([]);
+
     const [category, setCategory] = useState<Category>('Fermentary');
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loadingWarehouses, setLoadingWarehouses] = useState(false);
     const [errorWarehouses, setErrorWarehouses] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
+
+
 
     const normalizedLLG = selectedWard.trim();
     const {
@@ -40,7 +44,105 @@ export default function MarketPricesScreen() {
     } = useFermentaries(normalizedLLG);
     /***
      * * Fetch wards for the user's LLG and user role to determine access
+     * 
+     
      */
+    const fetchPrices = async () => {
+        try {
+            const { data: session } = await supabase.auth.getUser();
+            const email = session?.user?.email;
+            if (!email) {
+                console.warn("User not authenticated—skipping price fetch");
+                return;
+            }
+
+            // 🔍 Get ward_id from user_profile
+            const { data: userData, error: userError } = await supabase
+                .from("user_profile")
+                .select("ward_id")
+                .eq("email", email)
+                .single();
+
+            const wardId = userData?.ward_id?.trim();
+            if (userError || !wardId) {
+                console.warn("Ward not found for user—skipping price fetch");
+                return;
+            }
+
+            // 📦 Fetch fermentaries in that ward
+            const { data, error } = await supabase
+                .from("fermentary")
+                .select("*")
+                .eq("ward_id", wardId);
+
+            if (!error && data) {
+                setPrices(data);
+            } else {
+                console.error("Failed to fetch fermentary prices:", error?.message);
+            }
+        } catch (err: any) {
+            console.error("Unexpected error during price fetch:", err.message);
+        }
+    };
+
+
+
+
+    const handleCreatePrice = async () => {
+        try {
+
+            const parsedPrice = parseFloat(newPrice);
+
+            if (isNaN(parsedPrice) || parsedPrice <= 0) {
+                ToastAndroid.show('Please enter a valid price', ToastAndroid.SHORT);
+                return;
+            }
+
+            const { data: session } = await supabase.auth.getUser();
+            const userId = session?.user?.id;
+            if (!userId) throw new Error("User not authenticated");
+
+            // 🔍 Fetch fermentary owned by user
+            const { data: fermentary, error: fetchError } = await supabase
+                .from('fermentary')
+                .select('fermentary_id')
+                .eq('owner_id', userId)
+                .single();
+
+            if (fetchError || !fermentary) {
+                console.error('Fermentary not found for user:', userId);
+                ToastAndroid.show('No fermentary linked to your account', ToastAndroid.SHORT);
+                return;
+            }
+
+            // 🛠️ Update fermentary price
+            const { error: updateError } = await supabase
+                .from('fermentary')
+                .update({ price_per_kg: parsedPrice })
+                .eq('fermentary_id', fermentary.fermentary_id);
+
+            if (updateError) {
+                console.error('Failed to update fermentary price:', updateError.message);
+                ToastAndroid.show('Failed to update price', ToastAndroid.SHORT);
+                return;
+            }
+
+            // ✅ Success: reset form and trigger refresh
+            setShowCreateForm(false);
+            setNewPrice('');
+            setRefreshKey(prev => prev + 1);
+            ToastAndroid.show('Price updated successfully', ToastAndroid.SHORT);
+            await fetchPrices(); // 🔁 immediate refresh
+
+        } catch (error: any) {
+            console.error('Unexpected error:', error.message);
+            ToastAndroid.show('Something went wrong. Please try again.', ToastAndroid.SHORT);
+        }
+    };
+
+
+
+
     useEffect(() => {
         const fetchWards = async () => {
             try {
@@ -71,6 +173,7 @@ export default function MarketPricesScreen() {
             }
         };
 
+
         const fetchUserRole = async () => {
             const { data: session } = await supabase.auth.getUser();
             const email = session?.user?.email;
@@ -91,6 +194,7 @@ export default function MarketPricesScreen() {
                 }
             }
         };
+
 
 
 
@@ -140,6 +244,7 @@ export default function MarketPricesScreen() {
 
         fetchWards();
         fetchUserRole();
+        fetchPrices();
 
         fetchWarehousesFromWarehouseUsers();
     }, [selectedWard, category, refreshKey]);
@@ -281,42 +386,7 @@ export default function MarketPricesScreen() {
                             />
                             <TouchableOpacity
                                 style={styles.submitButton}
-                                onPress={async () => {
-                                    const { data: session } = await supabase.auth.getUser();
-                                    const userId = session?.user?.id;
-                                    if (!userId) return;
-
-                                    const { data: fermentary, error: fetchError } = await supabase
-
-                                        .from('fermentary')
-                                        .select('fermentary_id')
-                                        .eq('owner_id', userId)
-                                        .single();
-
-                                    if (fetchError || !fermentary) {
-                                        console.log('Authenticated user ID:', userId);
-
-                                        console.error('Fermentary not found for user');
-                                        return;
-                                    }
-
-                                    const { error: updateError } = await supabase
-                                        .from('fermentary')
-                                        .update({ price_per_kg: parseFloat(newPrice) })
-                                        .eq('fermentary_id', fermentary.fermentary_id);
-
-                                    if (updateError) {
-                                        console.error('Failed to update price:', updateError.message);
-                                    } else {
-                                        console.log('Fermentary price updated successfully');
-                                        setShowCreateForm(false);
-                                        setNewPrice('');
-                                        setRefreshKey((prev) => prev + 1); // Trigger data refresh
-                                        ToastAndroid.show('Price updated successfully', ToastAndroid.SHORT);
-
-
-                                    }
-                                }}
+                                onPress={handleCreatePrice}
                             >
                                 <Text style={styles.submitButtonText}>Submit Price</Text>
                             </TouchableOpacity>
