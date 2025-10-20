@@ -4,7 +4,7 @@
     "target": "ESNext",
     "strict": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -13,17 +13,12 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "./",
     "paths": {
-      "@services/*": [
-        "services/*"
-      ],
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@services/*": ["services/*"],
+      "@/*": ["./*"]
+    },
+    "customConditions": ["react-native"]
   },
-  
   "include": [
-    
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
