@@ -1,13 +1,32 @@
 import { Colors } from '@/constants/colors';
+import { supabase } from '@/lib/supabaseClient';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { supabase } from '../../lib/supabaseClient';
+import React, { useRef, useState } from 'react';
+import {
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const Registration = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const cardRadius = scrollY.interpolate({
+        inputRange: [0, 150],
+        outputRange: [0, 20], // corners become rounded as you scroll
+        extrapolate: 'clamp',
+    });
 
     const handleSignUp = async () => {
         if (password !== confirmPassword) {
@@ -15,6 +34,7 @@ const Registration = () => {
             return;
         }
 
+        setLoading(true);
         try {
             const { data, error } = await supabase.auth.signUp({ email, password });
 
@@ -24,76 +44,99 @@ const Registration = () => {
             }
 
             if (data.user) {
-                // Insert profile info in your own table (adjust table/columns as needed)
-                const { error: profileError } = await supabase.from('profiles').insert([
-                    {
-                        id: data.user.id,
-                        email: data.user.email,
-                        created_at: new Date().toISOString(),
-                    },
-                ]);
-
-                if (profileError) {
-                    console.error('Profile insert error:', profileError);
-                    Alert.alert('Warning', 'Account created but failed to save profile data.');
-                } else {
-                    Alert.alert('Signup Successful', `Welcome, ${data.user.email}`);
-                }
-
-                router.push('/(tabs)'); // Redirect to your app home
+                Alert.alert('Signup Successful', `Welcome, ${data.user.email}`);
+                router.replace('/(tabs)');
             } else {
                 Alert.alert('Signup Successful', 'Please check your email to verify your account.');
             }
         } catch (err) {
             console.error('Signup error:', err);
             Alert.alert('Signup Failed', 'An unexpected error occurred. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.loginCard}>
-                <Text style={styles.title}>Sign Up</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Confirm Password"
-                    secureTextEntry
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                />
-                <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-                    <Text style={styles.buttonText}>Register</Text>
-                </TouchableOpacity>
-                <Text style={styles.footerText}>
-                    Already have an account?{' '}
-                    <Link href="./login" style={styles.link}>
-                        Sign In
-                    </Link>
-                </Text>
-                <Text style={styles.footerText}>Forgot Password?</Text>
-            </View>
-        </View>
-    );
-};
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <Animated.ScrollView
+                contentContainerStyle={styles.scrollContainer}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                )}
+                scrollEventThrottle={16}
+            >
+                {/* Logo Section */}
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logo}>CocoaConnect</Text>
+                </View>
 
-export const unstable_settings = {
-    initialRouteName: 'sign-in',
-    drawer: null, // hides from drawer
+                {/* Input Card Section */}
+                <Animated.View
+                    style={[
+                        styles.loginCard,
+                        {
+                            borderTopLeftRadius: cardRadius,
+                            borderTopRightRadius: cardRadius,
+                        },
+                    ]}
+                >
+                    <Text style={styles.title}>Sign Up</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email"
+                        placeholderTextColor="#888"
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        value={email}
+                        onChangeText={setEmail}
+                    />
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        placeholderTextColor="#888"
+                        secureTextEntry
+                        value={password}
+                        onChangeText={setPassword}
+                    />
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Confirm Password"
+                        placeholderTextColor="#888"
+                        secureTextEntry
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                    />
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleSignUp}
+                        disabled={loading}
+                    >
+                        <Text style={styles.buttonText}>
+                            {loading ? 'Registering...' : 'Register'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.footerText}>
+                        Already have an account?{' '}
+                        <Link href="/(auth)/login" style={styles.link}>
+                            Sign In
+                        </Link>
+                    </Text>
+
+                    <Text style={styles.footerText}>Forgot Password?</Text>
+                </Animated.View>
+            </Animated.ScrollView>
+        </KeyboardAvoidingView>
+    );
 };
 
 export default Registration;
@@ -101,55 +144,71 @@ export default Registration;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'hsl(200,90%, 5%)',
+        backgroundColor: Colors.backgroundPrimary,
     },
-    title: {
-        fontSize: 24,
+    scrollContainer: {
+        flexGrow: 1,
+    },
+    logoContainer: {
+        paddingVertical: 60,
+        alignItems: 'center',
+        backgroundColor: '#409e67ff', // Dark green background
+    },
+    logo: {
+        color: '#f1f7f2ff', // Light green logo text
+        fontSize: 35,
         fontWeight: 'bold',
-        color: Colors.textPrimary,
-        marginBottom: 20,
-        textAlign: 'center',
     },
     loginCard: {
-        width: '90%',
-        padding: 20,
-        borderRadius: 10,
-        backgroundColor: Colors.backgroundSecondary,
+        flex: 1,
+        backgroundColor: '#fff', // White card
+        padding: 25,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 5,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    title: {
+        textAlign: 'center',
+        color: Colors.textPrimary,
+        fontSize: 24,
+        fontWeight: '700',
+        marginBottom: 20,
     },
     input: {
-        backgroundColor: Colors.backgroundSecondary,
-        width: '100%',
         height: 50,
-        borderColor: Colors.textPrimary,
-        borderWidth: 1,
-        borderRadius: 5,
-        paddingHorizontal: 10,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingHorizontal: 15,
         marginBottom: 15,
-        color: Colors.backgroundSecondary,
+        fontSize: 16,
+        color: Colors.textPrimary,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     button: {
-        width: '100%',
-        height: 40,
-        backgroundColor: Colors.actionPrimary,
-        justifyContent: 'center',
+        backgroundColor: '#2ecc71',
+        paddingVertical: 15,
+        borderRadius: 12,
         alignItems: 'center',
-        borderRadius: 5,
+        elevation: 3,
     },
     buttonText: {
         color: '#fff',
+        fontSize: 18,
+        fontWeight: '600',
     },
     footerText: {
-        textAlign: 'center',
-        marginTop: 15,
         color: Colors.textSecondary,
+        marginTop: 20,
+        textAlign: 'center',
+        fontSize: 14,
     },
     link: {
-        color: Colors.actionPrimary,
+        color: '#2ecc71',
+        fontWeight: '600',
+        textDecorationLine: 'underline',
     },
 });

@@ -39,14 +39,14 @@ export function useFermentaries(llgName: string) {
             ward_id,
             village,
             llg (
-              name
+              name_name
             )
           ),
           owner:profiles (
             full_name
           )
         `)
-        .ilike("ward.llg.name", llgName);
+        .ilike("ward.llg.name_name", llgName);
 
       if (fermentaryError) throw fermentaryError;
 

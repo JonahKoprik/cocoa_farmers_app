@@ -1,13 +1,31 @@
 import { Colors } from '@/constants/colors';
-import { supabase } from '@/lib/supabaseClient'; // Adjust path if needed
+import { supabase } from '@/lib/supabaseClient';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const cardRadius = scrollY.interpolate({
+        inputRange: [0, 150],
+        outputRange: [0, 20], // corners become rounded as you scroll
+        extrapolate: 'clamp',
+    });
 
     const handleLogin = async () => {
         setLoading(true);
@@ -18,121 +36,162 @@ const Login = () => {
             });
 
             if (error) {
-                const msg = error.message.toLowerCase();
-
-                // Detect if error is about email confirmation
-                if (msg.includes('email') && msg.includes('confirm')) {
-                    Alert.alert(
-                        'Email Not Confirmed',
-                        'Please check your email and confirm your account before logging in.'
-                    );
-                } else {
-                    Alert.alert('Login Failed', error.message);
-                }
+                Alert.alert('Login Failed', error.message);
             } else if (data.session) {
                 Alert.alert('Login Successful');
-                router.replace('/'); // Redirect to home or tabs layout
+                router.replace('/');
             }
         } catch (err) {
-            Alert.alert('Error', 'An unexpected error occurred');
+            Alert.alert('Error', 'Unexpected error occurred');
             console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
-
     return (
-        <View style={styles.container}>
-            <View style={styles.loginCard}>
-                <Text style={styles.title}>Sign In</Text>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <Animated.ScrollView
+                contentContainerStyle={styles.scrollContainer}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                )}
+                scrollEventThrottle={16}
+            >
+                {/* Logo Section */}
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logo}>CocoaConnect</Text>
+                </View>
 
-                <TextInput
-                    style={styles.input}
-                    placeholder='Email'
-                    autoCapitalize='none'
-                    keyboardType='email-address'
-                    value={email}
-                    onChangeText={setEmail}
-                />
+                {/* Input Card Section */}
+                <Animated.View
+                    style={[
+                        styles.loginCard,
+                        {
+                            borderTopLeftRadius: cardRadius,
+                            borderTopRightRadius: cardRadius,
+                        },
+                    ]}
+                >
+                    <Text style={styles.title}>Sign In</Text>
 
-                <TextInput
-                    style={styles.input}
-                    placeholder='Password'
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email"
+                        placeholderTextColor="#888"
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        value={email}
+                        onChangeText={setEmail}
+                    />
 
-                <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-                    <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
-                </TouchableOpacity>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        placeholderTextColor="#888"
+                        secureTextEntry
+                        value={password}
+                        onChangeText={setPassword}
+                    />
 
-                <Text style={styles.footerText}>
-                    Don't have an account?{' '}
-                    <Link href="/(auth)/registration" style={styles.link}>Register</Link>
-                </Text>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleLogin}
+                        disabled={loading}
+                    >
+                        <Text style={styles.buttonText}>
+                            {loading ? 'Logging in...' : 'Sign In'}
+                        </Text>
+                    </TouchableOpacity>
 
-                <Text style={styles.footerText}>Forgot Password?</Text>
-            </View>
-        </View>
+                    <Text style={styles.footerText}>
+                        Don't have an account?{' '}
+                        <Link href="/(auth)/registration" style={styles.link}>
+                            Register
+                        </Link>
+                    </Text>
+
+                    <Text style={styles.footerText}>Forgot Password?</Text>
+                </Animated.View>
+            </Animated.ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
 export default Login;
 
-// styles remain unchanged
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
+        backgroundColor: Colors.backgroundPrimary,
+    },
+    scrollContainer: {
+        flexGrow: 1,
+    },
+    logoContainer: {
+        paddingVertical: 60,
         alignItems: 'center',
-        backgroundColor: 'hsl(200,90%, 5%)',
-
+        backgroundColor: '#409e67ff', // Dark green background
+    },
+    logo: {
+        color: '#f1f7f2ff', // Green logo
+        fontSize: 35,
+        fontWeight: 'bold',
     },
     loginCard: {
-        width: '90%',
-        padding: 20,
-        borderRadius: 10,
-        backgroundColor: Colors.backgroundSecondary,
+        flex: 1,
+        backgroundColor: '#fff', // White card
+        padding: 25,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 5,
+        shadowRadius: 8,
+        elevation: 4,
     },
     title: {
         textAlign: 'center',
         color: Colors.textPrimary,
         fontSize: 24,
-        fontWeight: 'bold',
+        fontWeight: '700',
         marginBottom: 20,
     },
     input: {
-        color: Colors.textPrimary,
         height: 50,
-        backgroundColor: Colors.backgroundSecondary,
-        borderColor: Colors.textPrimary,
-        borderWidth: 1,
-        borderRadius: 5,
+        backgroundColor: '#fff',
+        borderRadius: 12,
         paddingHorizontal: 15,
         marginBottom: 15,
+        fontSize: 16,
+        color: Colors.textPrimary,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     button: {
-        backgroundColor: Colors.actionPrimary,
+        backgroundColor: '#2ecc71',
         paddingVertical: 15,
-        borderRadius: 5,
+        borderRadius: 12,
+        alignItems: 'center',
+        elevation: 3,
     },
     buttonText: {
         color: '#fff',
-        textAlign: 'center',
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: '600',
     },
     footerText: {
         color: Colors.textSecondary,
-        marginTop: 15,
+        marginTop: 20,
         textAlign: 'center',
+        fontSize: 14,
     },
     link: {
-        color: Colors.actionPrimary,
+        color: '#2ecc71',
+        fontWeight: '600',
+        textDecorationLine: 'underline',
     },
 });
