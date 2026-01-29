@@ -9,6 +9,7 @@ import {
     Alert,
     Button,
     Image,
+    SafeAreaView,
     StyleSheet,
     Text,
     TextInput,
@@ -76,53 +77,75 @@ export default function ProfileScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <TouchableOpacity onPress={pickImage}>
-                {imageUri ? (
-                    <Image source={{ uri: imageUri }} style={styles.avatar} />
-                ) : (
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>Upload Photo</Text>
-                    </View>
-                )}
-            </TouchableOpacity>
-
-            <TextInput
-                style={styles.input}
-                placeholder="Your Name"
-                placeholderTextColor={Colors.textPrimary}
-                value={name}
-                onChangeText={setName}
-            />
-
-            <View style={styles.pickerWrapper}>
-                <Picker
-                    selectedValue={role}
-                    onValueChange={(itemValue) => setRole(itemValue)}
-                    style={styles.picker}
-                    dropdownIconColor={Colors.textPrimary}
-                >
-                    <Picker.Item label="Select role..." value="" />
-                    <Picker.Item label="Farmer" value="farmer" />
-                    <Picker.Item label="Fermentary Owner" value="Fermentary Owner" />
-                    <Picker.Item label="Exporter" value="exporter" />
-                    <Picker.Item label="Organization" value="organization" />
-                </Picker>
+        <SafeAreaView style={styles.safe}>
+            <View style={styles.header}>
+                <Text style={styles.pageTitle}>Profile Management</Text>
             </View>
+            <View style={styles.container}>
+                <TouchableOpacity onPress={pickImage}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.avatar} />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <Text style={styles.avatarText}>Upload Photo</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
 
-            <Button title="Save Profile" onPress={handleSave} color={Colors.actionPrimary} />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Your Name"
+                    placeholderTextColor={Colors.textPrimary}
+                    value={name}
+                    onChangeText={setName}
+                />
 
-            <View style={{ marginTop: 16 }}>
-                <Button title="Logout" onPress={logout} color={Colors.actionPrimary} />
+                <View style={styles.pickerWrapper}>
+                    <Picker
+                        selectedValue={role}
+                        onValueChange={(itemValue) => setRole(itemValue)}
+                        style={styles.picker}
+                        dropdownIconColor={Colors.textPrimary}
+                    >
+                        <Picker.Item label="Select role..." value="" />
+                        <Picker.Item label="Farmer" value="farmer" />
+                        <Picker.Item label="Fermentary Owner" value="Fermentary Owner" />
+                        <Picker.Item label="Exporter" value="exporter" />
+                        <Picker.Item label="Organization" value="organization" />
+                    </Picker>
+                </View>
+
+                <Button title="Save Profile" onPress={handleSave} color={Colors.actionPrimary} />
+
+                <View style={{ marginTop: 16 }}>
+                    <Button title="Logout" onPress={logout} color={Colors.actionPrimary} />
+                </View>
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safe: {
+        flex: 1,
+    },
+    header: {
+        backgroundColor: '#2ecc71', // green header like sign-in
+        paddingVertical: 20,
+        paddingHorizontal: 20,
+
+        alignItems: 'flex-start',
+    },
+    pageTitle: {
+        fontSize: 22,
+        paddingTop: 40,
+        fontWeight: '900',
+        color: '#fff',
+        marginBottom: 4,
+    },
     container: {
         padding: 16,
-        backgroundColor: Colors.backgroundPrimary,
+        backgroundColor: '#e6eef3',
         flex: 1,
     },
     avatar: {

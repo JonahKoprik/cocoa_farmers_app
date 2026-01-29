@@ -1,5 +1,4 @@
 import { Colors } from '@/constants/colors';
-import { supabase } from '@/lib/supabaseClient';
 import { Link, router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -14,6 +13,7 @@ import {
     View,
 } from 'react-native';
 
+// arrow function 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -26,20 +26,39 @@ const Login = () => {
         outputRange: [0, 20], // corners become rounded as you scroll
         extrapolate: 'clamp',
     });
+    //async function to handle login requests
+    // const handleLogin = async () => {
+    //     setLoading(true);
+    //     try {
+    //         const { data, error } = await supabase.auth.signInWithPassword({
+    //             email,
+    //             password,
+    //         });
 
+    //         if (error) {
+    //             Alert.alert('Login Failed', error.message);
+    //         } else if (data.session) {
+    //             Alert.alert('Login Successful');
+    //             router.replace('/');
+    //         }
+    //     } catch (err) {
+    //         Alert.alert('Error', 'Unexpected error occurred');
+    //         console.error(err);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
+    // Updated handleLogin function
     const handleLogin = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (error) {
-                Alert.alert('Login Failed', error.message);
-            } else if (data.session) {
-                Alert.alert('Login Successful');
+            // Development-only: accept any credentials
+            if (email && password) {
+                Alert.alert('Login Successful (Mock)');
                 router.replace('/');
+            } else {
+                Alert.alert('Login Failed', 'Please enter email and password');
             }
         } catch (err) {
             Alert.alert('Error', 'Unexpected error occurred');
@@ -48,6 +67,7 @@ const Login = () => {
             setLoading(false);
         }
     };
+
 
     return (
         <KeyboardAvoidingView

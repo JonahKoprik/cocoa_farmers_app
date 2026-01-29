@@ -146,13 +146,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     headerName: {
         fontSize: 26,
         fontWeight: '700',
         color: '#fff',
         marginBottom: 6,
+
         // fontFamily: 'Inter_700Bold', // ensure Inter is loaded in App entry
     },
     headerLocation: {

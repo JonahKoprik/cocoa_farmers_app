@@ -29,6 +29,9 @@ export default function MarketPricesScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.pageTitle}>Local Bean Price</Text>
+            </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* 🔶 Section Title */}
                 <Text style={styles.sectionTitle}>Select Your LLG</Text>
@@ -71,6 +74,20 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.backgroundPrimary,
+    },
+    header: {
+        backgroundColor: '#2ecc71', // green header like sign-in
+        paddingVertical: 20,
+        paddingHorizontal: 20,
+
+        alignItems: 'flex-start',
+    },
+    pageTitle: {
+        fontSize: 22,
+        paddingTop: 40,
+        fontWeight: '900',
+        color: '#fff',
+        marginBottom: 4,
     },
     scrollContent: {
         paddingVertical: 16,

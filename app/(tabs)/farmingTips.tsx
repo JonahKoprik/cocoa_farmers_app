@@ -71,15 +71,14 @@ const styles = StyleSheet.create({
     safe: {
         flex: 1,
         height: 100,
-        backgroundColor: Colors.backgroundPrimary,
+        backgroundColor: '#e6eef3',
     },
     /* Static header */
     header: {
         backgroundColor: '#2ecc71', // green header like sign-in
         paddingVertical: 20,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 18,
-        borderBottomRightRadius: 18,
+
         alignItems: 'flex-start',
     },
     tabTitle: {
