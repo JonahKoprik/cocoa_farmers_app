@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Alert,
     Image,
@@ -56,7 +56,7 @@ export default function ProfileScreen() {
         });
 
         if (!result.canceled && result.assets.length > 0) {
-            setImageUri(result.assets[0].uri);
+            setImageUri(result.assets[0]?.uri || '');
         }
     };
 
@@ -68,11 +68,32 @@ export default function ProfileScreen() {
         setIsEditModalVisible(false);
     };
 
+    useEffect(() => {
+        const loadUserProfile = async () => {
+            if (user?.id) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    setName(profile.full_name || '');
+                    setRole(profile.role || '');
+                    setPhone(profile.phone || '');
+                    setLocation(profile.location || '');
+                }
+            }
+        };
+
+        loadUserProfile();
+    }, [user?.id]);
+
     const handleSave = async () => {
         if (!user?.id || !user.email) return;
 
         try {
-            const { data: existingProfile, error: fetchError } = await supabase
+            const { error: fetchError } = await supabase
                 .from('profiles')
                 .select('id')
                 .eq('id', user.id)
@@ -128,7 +149,6 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView style={styles.container}>
-                {/* User Account Section */}
                 <View style={styles.accountSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
                         {imageUri ? (
@@ -148,7 +168,6 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Menu Options Section */}
                 <View style={styles.menuSection}>
                     <Text style={styles.sectionTitle}>Settings</Text>
 
@@ -188,7 +207,6 @@ export default function ProfileScreen() {
                     />
                 </View>
 
-                {/* Logout Section */}
                 <View style={styles.logoutSection}>
                     <TouchableOpacity style={styles.logoutButton} onPress={logout}>
                         <Text style={styles.logoutText}>Log Out</Text>
@@ -196,7 +214,6 @@ export default function ProfileScreen() {
                 </View>
             </ScrollView>
 
-            {/* Edit Profile Modal */}
             <Modal
                 visible={isEditModalVisible}
                 animationType="slide"
@@ -256,7 +273,7 @@ export default function ProfileScreen() {
                             <View style={styles.pickerWrapper}>
                                 <Picker
                                     selectedValue={role}
-                                    onValueChange={(itemValue) => setRole(itemValue)}
+                                    onValueChange={(itemValue: string) => setRole(itemValue)}
                                     style={styles.picker}
                                     dropdownIconColor={Colors.textPrimary}
                                 >
@@ -430,7 +447,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    // Modal styles
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -485,43 +501,48 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     modalAvatarIcon: {
-        fontSize: 20,
+        fontSize: 24,
     },
     modalAvatarText: {
         color: Colors.textPrimary,
-        fontSize: 10,
+        fontSize: 12,
         marginTop: 4,
     },
     label: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         color: Colors.textPrimary,
         marginBottom: 8,
         marginTop: 12,
     },
     input: {
-        backgroundColor: Colors.backgroundSecondary,
-        color: Colors.textPrimary,
-        padding: 12,
+        backgroundColor: '#f5f5f5',
         borderRadius: 8,
+        padding: 12,
         fontSize: 16,
+        color: Colors.textPrimary,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     pickerWrapper: {
-        backgroundColor: Colors.backgroundSecondary,
+        backgroundColor: '#f5f5f5',
         borderRadius: 8,
-        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        overflow: 'hidden',
+        marginBottom: 16,
     },
     picker: {
+        padding: 12,
+        fontSize: 16,
         color: Colors.textPrimary,
-        paddingHorizontal: 12,
     },
     saveButton: {
         backgroundColor: '#2ecc71',
-        paddingVertical: 14,
+        paddingVertical: 16,
         borderRadius: 8,
         alignItems: 'center',
         marginTop: 24,
-        marginBottom: 20,
     },
     saveButtonText: {
         color: '#fff',

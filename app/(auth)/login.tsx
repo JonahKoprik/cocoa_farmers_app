@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/colors';
 import { supabase } from '@/lib/supabaseClient';
 import { Link, router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     Alert,
     Animated,
