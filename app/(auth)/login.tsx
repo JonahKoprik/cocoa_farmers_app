@@ -1,24 +1,35 @@
 import { Colors } from '@/constants/colors';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient'; // Adjust path if needed
 import { Link, router } from 'expo-router';
-import { useRef, useState } from 'react';
-import {
-    Alert,
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated } from 'react-native/Libraries/Animated/Animated';
+
 
 // arrow function 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
 
     const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -37,10 +48,20 @@ const Login = () => {
             });
 
             if (error) {
-                Alert.alert('Login Failed', error.message);
+                const msg = error.message.toLowerCase();
+
+                // Detect if error is about email confirmation
+                if (msg.includes('email') && msg.includes('confirm')) {
+                    Alert.alert(
+                        'Email Not Confirmed',
+                        'Please check your email and confirm your account before logging in.'
+                    );
+                } else {
+                    Alert.alert('Login Failed', error.message);
+                }
             } else if (data.session) {
                 Alert.alert('Login Successful');
-                router.replace('/');
+                router.replace('/'); // Redirect to home or tabs layout
             }
         } catch (err) {
             Alert.alert('Error', 'Unexpected error occurred');
@@ -71,75 +92,39 @@ const Login = () => {
 
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <Animated.ScrollView
-                contentContainerStyle={styles.scrollContainer}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: false }
-                )}
-                scrollEventThrottle={16}
-            >
-                {/* Logo Section */}
-                <View style={styles.logoContainer}>
-                    <Text style={styles.logo}>CocoaConnect</Text>
-                </View>
+        <View style={styles.container}>
+            <View style={styles.loginCard}>
+                <Text style={styles.title}>Sign In</Text>
 
-                {/* Input Card Section */}
-                <Animated.View
-                    style={[
-                        styles.loginCard,
-                        {
-                            borderTopLeftRadius: cardRadius,
-                            borderTopRightRadius: cardRadius,
-                        },
-                    ]}
-                >
-                    <Text style={styles.title}>Sign In</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder='Email'
+                    autoCapitalize='none'
+                    keyboardType='email-address'
+                    value={email}
+                    onChangeText={setEmail}
+                />
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor="#888"
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        value={email}
-                        onChangeText={setEmail}
-                    />
+                <TextInput
+                    style={styles.input}
+                    placeholder='Password'
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                />
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor="#888"
-                        secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
-                    />
+                <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+                    <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+                </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={handleLogin}
-                        disabled={loading}
-                    >
-                        <Text style={styles.buttonText}>
-                            {loading ? 'Logging in...' : 'Sign In'}
-                        </Text>
-                    </TouchableOpacity>
+                <Text style={styles.footerText}>
+                    Don't have an account?{' '}
+                    <Link href="/(auth)/registration" style={styles.link}>Register</Link>
+                </Text>
 
-                    <Text style={styles.footerText}>
-                        Don't have an account?{' '}
-                        <Link href="/(auth)/registration" style={styles.link}>
-                            Register
-                        </Link>
-                    </Text>
-
-                    <Text style={styles.footerText}>Forgot Password?</Text>
-                </Animated.View>
-            </Animated.ScrollView>
-        </KeyboardAvoidingView>
+                <Text style={styles.footerText}>Forgot Password?</Text>
+            </View>
+        </View>
     );
 };
 
@@ -156,12 +141,8 @@ const styles = StyleSheet.create({
     logoContainer: {
         paddingVertical: 60,
         alignItems: 'center',
-        backgroundColor: '#409e67ff', // Dark green background
-    },
-    logo: {
-        color: '#f1f7f2ff', // Green logo
-        fontSize: 35,
-        fontWeight: 'bold',
+        backgroundColor: 'hsl(200,90%, 5%)',
+
     },
     loginCard: {
         flex: 1,
@@ -195,9 +176,7 @@ const styles = StyleSheet.create({
     button: {
         backgroundColor: '#2ecc71',
         paddingVertical: 15,
-        borderRadius: 12,
-        alignItems: 'center',
-        elevation: 3,
+        borderRadius: 5,
     },
     buttonText: {
         color: '#fff',
@@ -216,3 +195,4 @@ const styles = StyleSheet.create({
         textDecorationLine: 'underline',
     },
 });
+

@@ -1,11 +1,17 @@
-export interface ActivityPost {
+export type ActivityPost = {
   id: string;
+  userId: string;
   timestamp: string;
-  likedBy: any[];
-  content: string; // ✅ use 'content' instead of 'text'
+  content: string;
   likes: number;
+  likedBy: string[];
   author: {
     name: string;
-    role: 'farmer' | 'exporter' | 'organization';
+    role:
+      | "farmer"
+      | "exporter"
+      | "organization"
+      | "warehouse"
+      | "fermentaryOwner";
   };
-}
+};

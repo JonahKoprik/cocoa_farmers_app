@@ -5,13 +5,11 @@ import React, { useRef, useState } from 'react';
 import {
     Alert,
     Animated,
-    KeyboardAvoidingView,
-    Platform,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 const Registration = () => {
@@ -44,8 +42,23 @@ const Registration = () => {
             }
 
             if (data.user) {
-                Alert.alert('Signup Successful', `Welcome, ${data.user.email}`);
-                router.replace('/(tabs)');
+                // Insert profile info in your own table (adjust table/columns as needed)
+                const { error: profileError } = await supabase.from('profiles').insert([
+                    {
+                        id: data.user.id,
+                        email: data.user.email,
+                        created_at: new Date().toISOString(),
+                    },
+                ]);
+
+                if (profileError) {
+                    console.error('Profile insert error:', profileError);
+                    Alert.alert('Warning', 'Account created but failed to save profile data.');
+                } else {
+                    Alert.alert('Signup Successful', `Welcome, ${data.user.email}`);
+                }
+
+                router.push('/(tabs)'); // Redirect to your app home
             } else {
                 Alert.alert('Signup Successful', 'Please check your email to verify your account.');
             }
@@ -58,84 +71,43 @@ const Registration = () => {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <Animated.ScrollView
-                contentContainerStyle={styles.scrollContainer}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: false }
-                )}
-                scrollEventThrottle={16}
-            >
-                {/* Logo Section */}
-                <View style={styles.logoContainer}>
-                    <Text style={styles.logo}>CocoaConnect</Text>
-                </View>
-
-                {/* Input Card Section */}
-                <Animated.View
-                    style={[
-                        styles.loginCard,
-                        {
-                            borderTopLeftRadius: cardRadius,
-                            borderTopRightRadius: cardRadius,
-                        },
-                    ]}
-                >
-                    <Text style={styles.title}>Sign Up</Text>
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor="#888"
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        value={email}
-                        onChangeText={setEmail}
-                    />
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor="#888"
-                        secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
-                    />
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Confirm Password"
-                        placeholderTextColor="#888"
-                        secureTextEntry
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                    />
-
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={handleSignUp}
-                        disabled={loading}
-                    >
-                        <Text style={styles.buttonText}>
-                            {loading ? 'Registering...' : 'Register'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <Text style={styles.footerText}>
-                        Already have an account?{' '}
-                        <Link href="/(auth)/login" style={styles.link}>
-                            Sign In
-                        </Link>
-                    </Text>
-
-                    <Text style={styles.footerText}>Forgot Password?</Text>
-                </Animated.View>
-            </Animated.ScrollView>
-        </KeyboardAvoidingView>
+        <View style={styles.container}>
+            <View style={styles.loginCard}>
+                <Text style={styles.title}>Sign Up</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    secureTextEntry
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                />
+                <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+                    <Text style={styles.buttonText}>Register</Text>
+                </TouchableOpacity>
+                <Text style={styles.footerText}>
+                    Already have an account?{' '}
+                    <Link href="./login" style={styles.link}>
+                        Sign In
+                    </Link>
+                </Text>
+                <Text style={styles.footerText}>Forgot Password?</Text>
+            </View>
+        </View>
     );
 };
 
@@ -152,7 +124,8 @@ const styles = StyleSheet.create({
     logoContainer: {
         paddingVertical: 60,
         alignItems: 'center',
-        backgroundColor: '#409e67ff', // Dark green background
+        justifyContent: 'center',
+        backgroundColor: 'hsl(200,90%, 5%)',
     },
     logo: {
         color: '#f1f7f2ff', // Light green logo text
@@ -179,14 +152,12 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 50,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        marginBottom: 15,
-        fontSize: 16,
-        color: Colors.textPrimary,
+        borderColor: Colors.textPrimary,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 15,
+        color: Colors.backgroundSecondary,
     },
     button: {
         backgroundColor: '#2ecc71',

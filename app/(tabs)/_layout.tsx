@@ -30,10 +30,10 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="farmingTips"
                 options={{
-                    title: 'Farming Tips',
+                    title: 'Tips',
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons
-                            name={focused ? 'leaf' : 'leaf-outline'}
+                            name={focused ? 'bulb' : 'bulb-outline'}
                             size={size}
                             color={color}
                         />
@@ -54,9 +54,9 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="posts"
                 options={{
-                    title: 'Post',
+                    title: 'Discussion',
                     tabBarIcon: ({ focused, color, size }) => <Ionicons
-                        name={focused ? "add-circle" : "add-circle-outline"}
+                        name={focused ? "chatbubble" : "chatbubble-outline"}
                         size={size}
                         color={color}
                     />,
@@ -88,10 +88,10 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Profile',
+                    title: 'Menu',
                     tabBarIcon: ({ focused, color, size }) =>
                         <Ionicons
-                            name={focused ? "person-circle" : "person-circle-outline"}
+                            name={focused ? "menu" : "menu-outline"}
                             size={size}
                             color={color} />,
                 }}

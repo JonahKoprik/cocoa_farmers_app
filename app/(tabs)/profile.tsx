@@ -3,113 +3,54 @@ import { useUser } from '@/context/UserContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Alert,
+    Button,
     Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
-
-interface MenuOptionProps {
-    icon: string;
-    title: string;
-    onPress: () => void;
-    showDivider?: boolean;
-}
-
-const MenuOption = ({ icon, title, onPress, showDivider = true }: MenuOptionProps) => (
-    <>
-        <TouchableOpacity style={styles.menuOption} onPress={onPress}>
-            <Text style={styles.menuIcon}>{icon}</Text>
-            <Text style={styles.menuTitle}>{title}</Text>
-            <Text style={styles.menuArrow}>›</Text>
-        </TouchableOpacity>
-        {showDivider && <View style={styles.divider} />}
-    </>
-);
 
 export default function ProfileScreen() {
     const { user, logout } = useUser();
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
-    const [phone, setPhone] = useState('');
-    const [location, setLocation] = useState('');
     const [imageUri, setImageUri] = useState<string | null>(null);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images, // or .Videos or .All
             allowsEditing: true,
             aspect: [4, 3],
             quality: 1,
         });
 
+
         if (!result.canceled && result.assets.length > 0) {
-            setImageUri(result.assets[0]?.uri || '');
+            setImageUri(result.assets[0].uri);
+            // TODO: Upload image to Supabase storage and update profile `avatar_url`
         }
     };
-
-    const openEditForm = () => {
-        setIsEditModalVisible(true);
-    };
-
-    const closeEditForm = () => {
-        setIsEditModalVisible(false);
-    };
-
-    useEffect(() => {
-        const loadUserProfile = async () => {
-            if (user?.id) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-
-                if (profile) {
-                    setName(profile.full_name || '');
-                    setRole(profile.role || '');
-                    setPhone(profile.phone || '');
-                    setLocation(profile.location || '');
-                }
-            }
-        };
-
-        loadUserProfile();
-    }, [user?.id]);
 
     const handleSave = async () => {
         if (!user?.id || !user.email) return;
 
         try {
-            const { error: fetchError } = await supabase
+            const { data: existingProfile, error: fetchError } = await supabase
                 .from('profiles')
                 .select('id')
                 .eq('id', user.id)
                 .single();
-
-            if (fetchError && fetchError.code !== 'PGRST116') {
-                throw fetchError;
-            }
 
             const payload = {
                 id: user.id,
                 email: user.email,
                 full_name: name,
                 role,
-                phone,
-                location,
             };
 
             const { error: upsertError } = await supabase
@@ -118,14 +59,11 @@ export default function ProfileScreen() {
 
             if (upsertError) {
                 Alert.alert('Error', 'Failed to save profile');
-                console.error('Upsert error:', upsertError.message);
             } else {
-                await SecureStore.setItemAsync('user_role', role);
                 Alert.alert('Success', 'Profile saved successfully');
                 closeEditForm();
             }
         } catch (err) {
-            console.error('Error saving profile:', err);
             Alert.alert('Error', 'Unexpected error while saving profile');
         }
     };
@@ -143,156 +81,46 @@ export default function ProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safe}>
-            <View style={styles.header}>
-                <Text style={styles.pageTitle}>Menu</Text>
+        <View style={styles.container}>
+            <TouchableOpacity onPress={pickImage}>
+                {imageUri ? (
+                    <Image source={{ uri: imageUri }} style={styles.avatar} />
+                ) : (
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarText}>Upload Photo</Text>
+                    </View>
+                )}
+            </TouchableOpacity>
+
+            <TextInput
+                style={styles.input}
+                placeholder="Your Name"
+                placeholderTextColor={Colors.textPrimary}
+                value={name}
+                onChangeText={setName}
+            />
+
+            <View style={styles.pickerWrapper}>
+                <Picker
+                    selectedValue={role}
+                    onValueChange={(itemValue: string) => setRole(itemValue)}
+                    style={styles.picker}
+                    dropdownIconColor={Colors.textPrimary}
+                >
+                    <Picker.Item label="Select role..." value="" />
+                    <Picker.Item label="Farmer" value="farmer" />
+                    <Picker.Item label="Fermentary Owner" value="Fermentary Owner" />
+                    <Picker.Item label="Exporter" value="exporter" />
+                    <Picker.Item label="Organization" value="organization" />
+                </Picker>
             </View>
 
-            <ScrollView style={styles.container}>
-                <View style={styles.accountSection}>
-                    <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
-                        {imageUri ? (
-                            <Image source={{ uri: imageUri }} style={styles.avatar} />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <Text style={styles.avatarIcon}>📷</Text>
-                                <Text style={styles.avatarText}>Add Photo</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+            <Button title="Save Profile" onPress={handleSave} color={Colors.actionPrimary} />
 
-                    <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-
-                    <TouchableOpacity style={styles.updateButton} onPress={openEditForm}>
-                        <Text style={styles.updateButtonText}>Update Profile</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.menuSection}>
-                    <Text style={styles.sectionTitle}>Settings</Text>
-
-                    <MenuOption
-                        icon="⚙️"
-                        title="Account Settings"
-                        onPress={handleAccountSettings}
-                    />
-
-                    <View style={styles.menuOption}>
-                        <View style={styles.menuOptionContent}>
-                            <Text style={styles.menuIcon}>🔔</Text>
-                            <Text style={styles.menuTitle}>Notifications</Text>
-                        </View>
-                        <Switch
-                            value={notificationsEnabled}
-                            onValueChange={setNotificationsEnabled}
-                            trackColor={{ false: '#767577', true: '#2ecc71' }}
-                            thumbColor={'#f4f3f4'}
-                        />
-                    </View>
-                    <View style={styles.divider} />
-
-                    <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Support</Text>
-
-                    <MenuOption
-                        icon="❓"
-                        title="Help & Support"
-                        onPress={handleHelpSupport}
-                    />
-
-                    <MenuOption
-                        icon="ℹ️"
-                        title="About"
-                        onPress={handleAbout}
-                        showDivider={false}
-                    />
-                </View>
-
-                <View style={styles.logoutSection}>
-                    <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-                        <Text style={styles.logoutText}>Log Out</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-
-            <Modal
-                visible={isEditModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={closeEditForm}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Update Profile</Text>
-                            <TouchableOpacity onPress={closeEditForm}>
-                                <Text style={styles.closeButton}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView style={styles.modalBody}>
-                            <TouchableOpacity onPress={pickImage} style={styles.modalAvatarContainer}>
-                                {imageUri ? (
-                                    <Image source={{ uri: imageUri }} style={styles.modalAvatar} />
-                                ) : (
-                                    <View style={styles.modalAvatarPlaceholder}>
-                                        <Text style={styles.modalAvatarIcon}>📷</Text>
-                                        <Text style={styles.modalAvatarText}>Change Photo</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-
-                            <Text style={styles.label}>Full Name</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your full name"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={name}
-                                onChangeText={setName}
-                            />
-
-                            <Text style={styles.label}>Phone Number</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your phone number"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={phone}
-                                onChangeText={setPhone}
-                                keyboardType="phone-pad"
-                            />
-
-                            <Text style={styles.label}>Location</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your location"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={location}
-                                onChangeText={setLocation}
-                            />
-
-                            <Text style={styles.label}>Role</Text>
-                            <View style={styles.pickerWrapper}>
-                                <Picker
-                                    selectedValue={role}
-                                    onValueChange={(itemValue: string) => setRole(itemValue)}
-                                    style={styles.picker}
-                                    dropdownIconColor={Colors.textPrimary}
-                                >
-                                    <Picker.Item label="Select role..." value="" />
-                                    <Picker.Item label="Farmer" value="farmer" />
-                                    <Picker.Item label="Fermentary Owner" value="Fermentary Owner" />
-                                    <Picker.Item label="Exporter" value="exporter" />
-                                    <Picker.Item label="Organization" value="organization" />
-                                </Picker>
-                            </View>
-
-                            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                                <Text style={styles.saveButtonText}>Save Changes</Text>
-                            </TouchableOpacity>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-        </SafeAreaView>
+            <View style={{ marginTop: 16 }}>
+                <Button title="Logout" onPress={logout} color={Colors.actionPrimary} />
+            </View>
+        </View>
     );
 }
 
@@ -315,238 +143,54 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     container: {
+        padding: 16,
+        backgroundColor: Colors.backgroundPrimary,
         flex: 1,
     },
-    accountSection: {
-        backgroundColor: '#fff',
-        margin: 16,
-        borderRadius: 12,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    avatarContainer: {
+    avatar: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         alignSelf: 'center',
         marginBottom: 16,
     },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        alignSelf: 'center',
-    },
     avatarPlaceholder: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         backgroundColor: Colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#2ecc71',
-        borderStyle: 'dashed',
-    },
-    avatarIcon: {
-        fontSize: 24,
+        alignSelf: 'center',
+        marginBottom: 16,
     },
     avatarText: {
         color: Colors.textPrimary,
-        fontSize: 12,
-        marginTop: 4,
-    },
-    userEmail: {
-        textAlign: 'center',
-        fontSize: 16,
-        color: '#2ecc71',
-        fontWeight: '600',
-        marginBottom: 16,
-    },
-    updateButton: {
-        backgroundColor: '#2ecc71',
-        paddingVertical: 14,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    updateButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    menuSection: {
-        backgroundColor: '#fff',
-        marginHorizontal: 16,
-        marginBottom: 16,
-        borderRadius: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    sectionTitle: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: Colors.textPrimary,
-        marginBottom: 8,
-        marginTop: 8,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    menuOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 14,
-    },
-    menuOptionContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    menuIcon: {
-        fontSize: 20,
-        marginRight: 12,
-        width: 30,
-        textAlign: 'center',
-    },
-    menuTitle: {
-        flex: 1,
-        fontSize: 16,
-        color: Colors.textPrimary,
-    },
-    menuArrow: {
-        fontSize: 18,
-        color: '#ccc',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-    },
-    logoutSection: {
-        marginHorizontal: 16,
-        marginBottom: 32,
-    },
-    logoutButton: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    logoutText: {
-        color: '#e74c3c',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '85%',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: Colors.textPrimary,
-    },
-    closeButton: {
-        fontSize: 24,
-        color: '#999',
-        padding: 4,
-    },
-    modalBody: {
-        padding: 20,
-    },
-    modalAvatarContainer: {
-        alignSelf: 'center',
-        marginBottom: 20,
-    },
-    modalAvatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        alignSelf: 'center',
-    },
-    modalAvatarPlaceholder: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: Colors.backgroundSecondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#2ecc71',
-        borderStyle: 'dashed',
-    },
-    modalAvatarIcon: {
-        fontSize: 24,
-    },
-    modalAvatarText: {
-        color: Colors.textPrimary,
-        fontSize: 12,
-        marginTop: 4,
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Colors.textPrimary,
-        marginBottom: 8,
-        marginTop: 12,
     },
     input: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        backgroundColor: Colors.backgroundSecondary,
         color: Colors.textPrimary,
-        borderWidth: 1,
-        borderColor: '#ddd',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    label: {
+        color: Colors.textPrimary,
+        marginBottom: 4,
+        fontWeight: 'bold',
     },
     pickerWrapper: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: Colors.backgroundSecondary,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        overflow: 'hidden',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     picker: {
-        padding: 12,
-        fontSize: 16,
         color: Colors.textPrimary,
-    },
-    saveButton: {
-        backgroundColor: '#2ecc71',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 24,
-    },
-    saveButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+        paddingHorizontal: 12,
     },
 });
+function closeEditForm() {
+    throw new Error('Function not implemented.');
+}
+
