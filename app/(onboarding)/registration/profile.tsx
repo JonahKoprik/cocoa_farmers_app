@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     StyleSheet,
@@ -128,7 +128,7 @@ export default function ProfileScreen() {
             >
                 <Picker.Item label={`Select ${label}...`} value="" />
                 {options.map((opt, i) => (
-                    <Picker.Item key={i} label={opt} value={opt} />
+                    <Picker.Item label={opt} value={opt} />
                 ))}
             </Picker>
         </View>

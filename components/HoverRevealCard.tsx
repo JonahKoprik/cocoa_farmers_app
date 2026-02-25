@@ -244,7 +244,7 @@ export const HoverRevealCard: React.FC<HoverRevealCardProps> = ({
                             {revealPoints && (
                                 <View style={styles.pointsContainer}>
                                     {revealPoints.map((point, index) => (
-                                        <View key={index} style={styles.pointRow}>
+                                        <View style={styles.pointRow}>
                                             <View style={styles.bullet} />
                                             <Text style={styles.pointText}>{point}</Text>
                                         </View>

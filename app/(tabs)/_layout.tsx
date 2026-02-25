@@ -43,7 +43,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="fermentaryPrice"
                 options={{
-                    title: 'Prices',
+                    title: 'Pricing',
                     tabBarIcon: ({ focused, color, size }) => <Ionicons
                         name={focused ? "pricetag" : "pricetag-outline"}
                         size={size}

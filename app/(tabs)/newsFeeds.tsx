@@ -1,15 +1,18 @@
 import { Colors } from '@/constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     FlatList,
     Linking,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalNews } from '../../hooks/useLocalNews';
 
 type NewsArticle = {
     title: string;
@@ -17,6 +20,13 @@ type NewsArticle = {
     url: string;
     source?: string;
     category?: string;
+};
+
+type GlobalNewsArticle = {
+    title: string;
+    description: string;
+    url?: string;
+    source_name?: string;
 };
 
 const fallbackArticles: NewsArticle[] = [
@@ -82,85 +92,157 @@ const globalFallbackArticles: NewsArticle[] = [
 ];
 
 export default function NewsFeedScreen() {
-    const [articles, setArticles] = useState<NewsArticle[]>([]);
+    const [globalNews, setGlobalNews] = useState<GlobalNewsArticle[]>([]);
+    const [refreshingGlobal, setRefreshingGlobal] = useState(false);
+    const [activeTab, setActiveTab] = useState<'global' | 'local'>('local');
 
-    useEffect(() => {
-        const fetchNews = async () => {
-            try {
-                const res = await fetch(
-                    'https://tuxlvyfredtuknhsqdtj.supabase.co/functions/v1/fetch-news',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-                        },
-                        body: JSON.stringify({ query: 'PNG cocoa' }),
-                    }
-                );
+    const {
+        articles: localNews,
+        refreshing: refreshingLocal,
+        refetch: refetchLocal,
+    } = useLocalNews();
 
-                const data = await res.json();
-                if (res.ok && Array.isArray(data.articles)) {
-                    setArticles(data.articles);
-                } else {
-                    setArticles(fallbackArticles);
+    const fetchGlobalNews = useCallback(async () => {
+        setRefreshingGlobal(true);
+        try {
+            const res = await fetch(
+                'https://tuxlvyfredtuknhsqdtj.supabase.co/rest/v1/news_articles?select=title,description,url,source_name&order=published_at.desc',
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+                        Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+                    },
                 }
-            } catch (err) {
-                console.error('Failed to fetch cocoa news:', err);
-                setArticles(fallbackArticles);
-            }
-        };
+            );
 
-        fetchNews();
+            const data = await res.json();
+            if (res.ok && Array.isArray(data)) {
+                const formatted = data.map((item) => ({
+                    title: item.title,
+                    description: item.description,
+                    url: item.url,
+                    source_name: item.source_name,
+                }));
+                setGlobalNews(formatted);
+            } else {
+                console.warn('⚠️ Unexpected global response format:', data);
+                setGlobalNews(globalFallbackArticles);
+            }
+        } catch (err) {
+            console.error('❌ Failed to fetch global news:', err);
+            setGlobalNews(globalFallbackArticles);
+        } finally {
+            setRefreshingGlobal(false);
+        }
     }, []);
 
-    return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-            {/* 🟤 Coresoul Section */}
-            <Text style={styles.sectionTitle}>Success Stories</Text>
-            <FlatList
-                data={articles}
-                keyExtractor={(_item: NewsArticle, index: number) => index.toString()}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-                renderItem={({ item }: { item: NewsArticle }) => (
-                    <TouchableOpacity onPress={() => Linking.openURL(item.url)}>
-                        <LinearGradient
-                            colors={['#ded6cbff', '#ded6cbff', '#ded6cbff'] as const}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.card}
-                        >
-                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                            <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
-                            <Text style={styles.cardLink}>View More</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-            />
+    const handleRefresh = useCallback(async () => {
+        if (activeTab === 'global') {
+            await fetchGlobalNews();
+        } else {
+            await refetchLocal();
+        }
+    }, [activeTab, fetchGlobalNews, refetchLocal]);
 
-            {/*Recent Activities Section */}
-            <Text style={styles.sectionTitle}>Latest News</Text>
-            <View style={styles.verticalList}>
-                {articles.map((item: NewsArticle, index: number) => (
-                    <TouchableOpacity key={index} onPress={() => Linking.openURL(item.url)}>
-                        <View style={styles.verticalCard}>
-                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
-                            <Text style={styles.body}>{item.description || 'No summary available.'}</Text>
-                            <Text style={styles.link}>View More</Text>
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
-        </ScrollView>
+    useEffect(() => {
+        fetchGlobalNews();
+    }, [fetchGlobalNews]);
+
+    return (
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                <ScrollView
+                    style={styles.container}
+                    contentContainerStyle={styles.scrollContent}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshingGlobal || refreshingLocal}
+                            onRefresh={handleRefresh}
+                        />
+                    }
+                >
+                    {/* Tab Buttons */}
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'local' && styles.activeTab]}
+                            onPress={() => setActiveTab('local')}
+                        >
+                            <Text style={styles.tabText}>Local News</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'global' && styles.activeTab]}
+                            onPress={() => setActiveTab('global')}
+                        >
+                            <Text style={styles.tabText}>Global News</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Global News Section */}
+                    {activeTab === 'global' && (
+                        <>
+                            <Text style={styles.sectionTitle}>Global News</Text>
+                            <FlatList
+                                data={globalNews}
+                                keyExtractor={(item, index) => index.toString()}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.horizontalList}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        onPress={() => item.url && Linking.openURL(item.url)}
+                                    >
+                                        <LinearGradient
+                                            colors={['#ded6cbff', '#ded6cbff', '#ded6cbff']}
+                                            style={styles.card}
+                                        >
+                                            <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                            <Text style={styles.body} numberOfLines={3}>
+                                                {item.description || 'No summary available.'}
+                                            </Text>
+                                            <Text style={styles.link}>View More</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </>
+                    )}
+
+                    {/* Local News Section */}
+                    {activeTab === 'local' && (
+                        <>
+                            <Text style={styles.sectionTitle}>Local News</Text>
+                            <View style={styles.verticalList}>
+                                {localNews.map((item) => {
+                                    const link = item.url ?? item.source;
+                                    if (!link || !link.startsWith('http')) return null;
+
+                                    return (
+                                        <TouchableOpacity key={item.id} onPress={() => Linking.openURL(link)}>
+                                            <View style={styles.verticalCard}>
+                                                <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+                                                <Text style={styles.body} numberOfLines={3}>
+                                                    {item.summary ?? 'No summary available.'}
+                                                </Text>
+                                                <Text style={styles.link}>View More</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </>
+                    )}
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
-//Styles for this page
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.backgroundPrimary, // Steel Gray (60%)
+        backgroundColor: Colors.backgroundPrimary,
     },
     scrollContent: {
         paddingBottom: 20,
@@ -168,13 +250,11 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.textPrimary, // Black
+        color: Colors.textPrimary,
         paddingHorizontal: 16,
         marginBottom: 12,
         marginTop: 8,
     },
-
-    // Horizontal List
     horizontalList: {
         paddingLeft: 16,
         paddingRight: 8,
@@ -193,46 +273,22 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 6,
     },
-    sourceBadge: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-    },
-    sourceText: {
-        color: 'rgba(255,255,255,0.9)',
-        fontSize: 11,
+    title: {
+        fontSize: 16,
         fontWeight: '600',
+        marginBottom: 4,
+        color: Colors.textPrimary,
     },
-    cardTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#fff',
+    body: {
+        fontSize: 14,
+        color: '#333',
         marginBottom: 8,
     },
-    cardBody: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.85)',
-        lineHeight: 18,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    cardLink: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    readArrow: {
-        color: '#fff',
+    link: {
+        color: Colors.actionPrimary,
         fontSize: 14,
-        marginLeft: 4,
+        fontWeight: '500',
     },
-
-    // Vertical List
     verticalList: {
         paddingHorizontal: 16,
     },
@@ -243,36 +299,24 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         elevation: 2,
     },
-    title: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 4,
-        color: Colors.textPrimary, // Black
-    },
-    body: {
-        fontSize: 14,
-        color: '#333', // Slightly muted black for body text
-        marginBottom: 8,
-    },
-    link: {
-        color: Colors.actionPrimary, // Leaf Green (10%)
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    verticalTitle: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: Colors.textPrimary,
-        marginBottom: 6,
-    },
-    verticalBody: {
-        fontSize: 14,
-        color: '#555',
-        lineHeight: 20,
-        marginBottom: 12,
-    },
-    verticalFooter: {
+    tabContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        paddingHorizontal: 16,
+    },
+    tabButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+        marginHorizontal: 8,
+        borderRadius: 20,
+        backgroundColor: Colors.backgroundSecondary,
+    },
+    activeTab: {
+        backgroundColor: Colors.actionPrimary,
+    },
+    tabText: {
+        color: Colors.textPrimary,
+        fontWeight: 'bold',
     },
 });

@@ -13,14 +13,14 @@ export type Fermentary = {
   llg_name: string;
 };
 
-export function useFermentaries(llgName: string) {
+export function useFermentaries(wardName: string) {
   const [data, setData] = useState<Fermentary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFermentaries = useCallback(async () => {
-    const trimmedLLG = llgName.trim();
-    if (!trimmedLLG) {
+    const trimmedWard = wardName.trim();
+    if (!trimmedWard) {
       setData([]);
       setError(null);
       return;
@@ -29,29 +29,18 @@ export function useFermentaries(llgName: string) {
     setLoading(true);
 
     try {
-      // Step 1: Resolve llg_id from llg_name
-      const { data: llgData, error: llgError } = await supabase
-        .from("llg")
-        .select("llg_id")
-        .eq("llg_name", trimmedLLG)
-        .single();
-
-      if (llgError || !llgData) throw new Error("LLG not found");
-
-      const llgId = llgData.llg_id;
-
-      // Step 2: Get all ward_ids for that llg_id
-      const { data: wardData, error: wardError } = await supabase
+      // Step 1: Resolve ward_id from ward_name
+      const { data: wardRecord, error: wardError } = await supabase
         .from("ward")
         .select("ward_id")
-        .eq("llg_id", llgId);
+        .eq("ward_name", trimmedWard)
+        .single();
 
-      if (wardError || !wardData || wardData.length === 0)
-        throw new Error("No wards found for this LLG");
+      if (wardError || !wardRecord?.ward_id) throw new Error("Ward not found");
 
-      const wardIds = wardData.map((w) => w.ward_id);
+      const wardId = wardRecord.ward_id;
 
-      // Step 3: Fetch fermentaries in those wards using the resolved ward_ids
+      // Step 2: Fetch fermentaries in that ward
       const { data: fermentaries, error: fermentaryError } = await supabase
         .from("fermentary")
         .select(
@@ -71,7 +60,7 @@ export function useFermentaries(llgName: string) {
           )
         `,
         )
-        .in("ward_id", wardIds);
+        .eq("ward_id", wardId);
 
       if (fermentaryError) throw fermentaryError;
 
@@ -81,11 +70,11 @@ export function useFermentaries(llgName: string) {
           fermentary_name: f.fermentary_name,
           owner_name: f.owner?.full_name?.trim() || "Unknown",
           ward_id: f.ward?.ward_id ?? "",
-          ward_name: f.ward?.ward_name ?? "",
+          ward_name: f.ward?.ward_name ?? trimmedWard,
           contact: f.contact ?? "",
           price_per_kg: typeof f.price_per_kg === "number" ? f.price_per_kg : 0,
           updated_at: f.updated_at ?? new Date().toISOString(),
-          llg_name: trimmedLLG,
+          llg_name: "",
         }),
       );
 
@@ -97,7 +86,7 @@ export function useFermentaries(llgName: string) {
     } finally {
       setLoading(false);
     }
-  }, [llgName]);
+  }, [wardName]);
 
   useEffect(() => {
     fetchFermentaries();

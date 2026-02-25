@@ -2,88 +2,37 @@ import CocoaWave from '@/components/CocoaWave';
 import { Colors } from '@/constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
-import {
-    Gesture,
-    GestureDetector,
-    GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import { Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GettingStarted() {
     const navigateToProfile = () => router.push('/registration/profile');
 
-    const registerGesture = Gesture.Tap()
-        .shouldCancelWhenOutside(true)
-        .runOnJS(true)
-        .onEnd(() => navigateToProfile());
-
-    // Fade-in animations using built-in Animated API
-    const titleOpacity = useRef(new Animated.Value(0)).current;
-    const titleTranslateY = useRef(new Animated.Value(30)).current;
-    const buttonOpacity = useRef(new Animated.Value(0)).current;
-    const buttonTranslateY = useRef(new Animated.Value(30)).current;
-
-    useEffect(() => {
-        Animated.sequence([
-            Animated.parallel([
-                Animated.timing(titleOpacity, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(titleTranslateY, {
-                    toValue: 0,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ]),
-            Animated.parallel([
-                Animated.timing(buttonOpacity, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(buttonTranslateY, {
-                    toValue: 0,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ]),
-        ]).start();
-    }, []);
+    const isNative = Platform.OS !== 'web';
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
-                <CocoaWave />
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <CocoaWave />
 
-                <SafeAreaView style={styles.safeArea}>
-                    <Animated.Text
-                        style={[
-                            styles.startedText,
-                            { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] },
-                        ]}
-                    >
-                        Welcome to Cocoa Farmers App
-                    </Animated.Text>
+            <SafeAreaView style={styles.safeArea}>
+                <Animated.Text
+                    entering={isNative ? FadeInDown.duration(800) : undefined}
+                    style={styles.startedText}
+                >
+                    Welcome to Cocoa Farmers App
+                </Animated.Text>
 
-                    <Animated.View
-                        style={[
-                            styles.container,
-                            { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] },
-                        ]}
-                    >
-                        <GestureDetector gesture={registerGesture}>
-                            <Animated.View style={styles.button}>
-                                <Text style={styles.buttonText}>Create your profile</Text>
-                            </Animated.View>
-                        </GestureDetector>
-                    </Animated.View>
-                </SafeAreaView>
-            </LinearGradient>
-        </GestureHandlerRootView>
+                <Animated.View
+                    entering={isNative ? FadeInDown.delay(300).duration(800) : undefined}
+                    style={styles.container}
+                >
+                    <TouchableOpacity style={styles.button} onPress={navigateToProfile}>
+                        <Text style={styles.buttonText}>Create your profile</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 

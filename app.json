@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "cocoa_farmers_app",
-    "slug": "cocoa_farmers_app",
+    "slug": "png-cfpa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "cocoafarmersapp",
+    "scheme": "expo+png-cfpa",
     "platforms": [
       "ios",
       "android",
@@ -46,7 +46,8 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -54,8 +55,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "b0aa29b5-8ab2-4b9d-95ef-7b694b4011c7"
+        "projectId": "eb63e6ee-c6c6-43ac-8106-03409fae238f"
       }
-    }
+    },
+    "owner": "jonah_koprik"
   }
 }

@@ -1,17 +1,17 @@
 import { HeaderBar } from '@/components/HeaderBar';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GradientCard } from '../../components/GradientCard';
 import { PostCard } from '../../components/PostCard';
 import { PriceRow } from '../../components/PriceRow';
 import { TipCard } from '../../components/TipCard';
-import { PriceCard } from '../../components/types/PriceCard';
 import { ActivityPost } from '../../components/types/activityPost';
 import { Colors } from '../../constants/colors';
 import { useFarmingTips } from '../../hooks/useFarmingTips';
 import { usePrices } from '../../hooks/usePrice';
 import { useRecentPosts } from '../../hooks/useRecentPosts';
+import { supabase } from '../../lib/supabaseClient';
 
 interface FarmingTip {
     title: string;
@@ -30,26 +30,58 @@ export default function MarketPricesScreen() {
     const { tips } = useFarmingTips();
     const { posts } = useRecentPosts();
 
-    const priceCards: PriceCard[] = [
-        {
-            label: 'Wet Bean Price',
-            value: typeof localPrices?.wet === 'number' ? localPrices.wet : null,
-            gradient: PRICE_GRADIENTS[0],
-            currency: 'PGK/kg',
-        },
-        {
-            label: 'Dry Bean Price',
-            value: typeof localPrices?.dry === 'number' ? localPrices.dry : null,
-            gradient: PRICE_GRADIENTS[1],
-            currency: 'PGK/kg',
-        },
-        {
-            label: 'Global Cocoa Price',
-            value: typeof globalPrices?.global === 'number' ? globalPrices.global : null,
-            gradient: PRICE_GRADIENTS[2],
-            currency: 'USD/ton',
-        },
-    ];
+    const [farmerCount, setFarmerCount] = useState(0);
+    const [fermentaryCount, setFermentaryCount] = useState(0);
+    const [warehouseCount, setWarehouseCount] = useState(0);
+    const [user, setUser] = useState<{ email?: string }>({});
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data } = await supabase.auth.getUser();
+            setUser(data?.user || {});
+        };
+        fetchUser();
+    }, []);
+
+    useEffect(() => {
+        const fetchCounts = async () => {
+            if (!user?.email) return;
+
+            const { data: profile } = await supabase
+                .from('user_profile')
+                .select('province_id')
+                .eq('email', user.email)
+                .single();
+
+            const provinceId = profile?.province_id;
+            if (!provinceId) return;
+
+            const [{ count: farmers }, { count: fermentaries }, { count: warehouses }] = await Promise.all([
+                supabase
+                    .from('user_profile')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('role', 'Farmer')
+                    .eq('province_id', provinceId),
+
+                supabase
+                    .from('user_profile')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('role', 'FermentaryOwner')
+                    .eq('province_id', provinceId),
+
+                supabase
+                    .from('warehouse')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('province_id', provinceId),
+            ]);
+
+            setFarmerCount(farmers ?? 0);
+            setFermentaryCount(fermentaries ?? 0);
+            setWarehouseCount(warehouses ?? 0);
+        };
+
+        fetchCounts();
+    }, [user?.email]);
 
     const recommendedTips = tips.slice(0, 5);
     const recentTips = tips.slice(5, 10);
@@ -77,26 +109,34 @@ export default function MarketPricesScreen() {
                     <Text style={styles.heroSub}>Local Dry Bean · PGK</Text>
                 </LinearGradient>
 
-                {/* ── Market Prices ── */}
-                <SectionHeader title="📈 Market Prices" />
-                <FlatList<PriceCard>
-                    horizontal
-                    data={priceCards}
-                    keyExtractor={(item: PriceCard) => item.label}
-                    renderItem={({ item }: { item: PriceCard }) => (
-                        <GradientCard colors={item.gradient} style={styles.priceCardOverride}>
-                            <Text style={styles.priceCardLabel}>{item.label}</Text>
-                            <Text style={styles.priceCardValue}>
-                                {typeof item.value === 'number'
-                                    ? item.value.toFixed(2)
-                                    : '—'}
-                            </Text>
-                            <Text style={styles.priceCardCurrency}>{item.currency}</Text>
-                        </GradientCard>
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.horizontalList}
-                />
+                {/* ── Province Stats ── */}
+                <View style={styles.section}>
+                    <SectionHeader title=" Province Statistic Overview" />
+                    <View style={styles.statsRow}>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Farmers</Text>
+                            <Text style={styles.statValue}>{farmerCount}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Fermentary Owners</Text>
+                            <Text style={styles.statValue}>{fermentaryCount}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statLabel}>Warehouses</Text>
+                            <Text style={styles.statValue}>{warehouseCount}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* ── Graphs Placeholder ── */}
+                <View style={styles.section}>
+                    <SectionHeader title="Graphs & Trends" />
+                    <View style={styles.graphPlaceholder}>
+                        <Text style={styles.emptyText}>
+                            Coming soon: cocoa trends & activity graphs
+                        </Text>
+                    </View>
+                </View>
 
                 {/* ── Price Summary ── */}
                 <SectionHeader title="💰 Price Summary" />
@@ -126,9 +166,9 @@ export default function MarketPricesScreen() {
                     <>
                         <SectionHeader title="📋 Recent Tips" />
                         <View style={styles.feedSection}>
-                            {recentTips.map((tip, index) => (
-                                <TipFeedCard key={`recent-tip-${index}`} tip={tip} />
-                            ))}
+                            {recentTips.map((tip, index) =>
+                                React.cloneElement(<TipFeedCard tip={tip} />, { key: `recent-tip-${index}` })
+                            )}
                         </View>
                     </>
                 )}
@@ -143,9 +183,9 @@ export default function MarketPricesScreen() {
                             <Text style={styles.emptyText}>Be the first to share an update!</Text>
                         </View>
                     ) : (
-                        posts.map((post: ActivityPost, index: number) => (
-                            <PostFeedCard key={`recent-post-${index}`} post={post} />
-                        ))
+                        posts.map((post: ActivityPost, index: number) =>
+                            React.cloneElement(<PostFeedCard post={post} />, { key: `recent-post-${index}` })
+                        )
                     )}
                 </View>
 
@@ -155,8 +195,8 @@ export default function MarketPricesScreen() {
     );
 }
 
-// ── Feed card wrappers (key-safe for React 19 + @types/react-native 0.72) ──
-function TipFeedCard({ tip }: React.Attributes & { tip: FarmingTip }) {
+// ── Feed card wrappers ──
+function TipFeedCard({ tip }: { tip: FarmingTip }) {
     return (
         <View style={styles.feedCard}>
             <TipCard title={tip.title} content={tip.content} />
@@ -164,7 +204,7 @@ function TipFeedCard({ tip }: React.Attributes & { tip: FarmingTip }) {
     );
 }
 
-function PostFeedCard({ post }: React.Attributes & { post: ActivityPost }) {
+function PostFeedCard({ post }: { post: ActivityPost }) {
     return (
         <View style={styles.feedCard}>
             <PostCard post={post} currentUserId="JK" />
@@ -185,13 +225,11 @@ function SectionHeader({ title }: { title: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F0EB', // warm off-white background
+        backgroundColor: '#F5F0EB',
     },
     scrollContent: {
         paddingBottom: 24,
     },
-
-    // ── Hero Banner ──
     heroBanner: {
         marginHorizontal: 16,
         marginTop: 16,
@@ -228,8 +266,6 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.6)',
         marginTop: 4,
     },
-
-    // ── Section Header ──
     sectionHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -247,47 +283,47 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#2C1A0E', // deep cocoa
+        color: '#2C1A0E',
         letterSpacing: 0.2,
     },
-
-    // ── Horizontal Lists ──
     horizontalList: {
         paddingLeft: 16,
         paddingRight: 8,
     },
-
-    // ── Price Cards ──
-    priceCardOverride: {
-        minWidth: 160,
-        maxWidth: 200,
-        paddingVertical: 18,
+    section: {
+        marginTop: 16,
+    },
+    statsRow: {
+        flexDirection: 'row',
         paddingHorizontal: 16,
-        marginRight: 12,
-        borderRadius: 14,
+        gap: 10,
     },
-    priceCardLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: 'rgba(255,255,255,0.75)',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-        marginBottom: 8,
+    statCard: {
+        flex: 1,
+        backgroundColor: Colors.backgroundSecondary,
+        padding: 12,
+        borderRadius: 12,
+        alignItems: 'center',
     },
-    priceCardValue: {
-        fontSize: 28,
+    statLabel: {
+        fontSize: 11,
+        color: '#666',
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    statValue: {
+        fontSize: 20,
         fontWeight: '800',
-        color: '#FFFFFF',
-        letterSpacing: -0.5,
+        color: Colors.actionPrimary,
     },
-    priceCardCurrency: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.65)',
-        marginTop: 4,
-        fontWeight: '500',
+    graphPlaceholder: {
+        marginHorizontal: 16,
+        height: 120,
+        backgroundColor: Colors.backgroundSecondary,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-
-    // ── Price Summary Card ──
     summaryCard: {
         marginHorizontal: 16,
         backgroundColor: '#FFFFFF',
@@ -309,16 +345,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0EBE6',
         marginVertical: 2,
     },
-
-    // ── Tip Cards (horizontal) ──
     tipCardOverride: {
         minWidth: 220,
         maxWidth: 260,
         marginRight: 12,
         borderRadius: 14,
     },
-
-    // ── Feed Section (vertical list) ──
     feedSection: {
         marginHorizontal: 16,
         gap: 10,
@@ -337,8 +369,6 @@ const styles = StyleSheet.create({
             android: { elevation: 2 },
         }),
     },
-
-    // ── Empty State ──
     emptyState: {
         alignItems: 'center',
         paddingVertical: 32,
@@ -355,23 +385,20 @@ const styles = StyleSheet.create({
         }),
     },
     emptyIcon: {
-        fontSize: 36,
+        fontSize: 40,
         marginBottom: 8,
     },
     emptyTitle: {
         fontSize: 16,
-        fontWeight: '700',
-        color: '#2C1A0E',
+        fontWeight: '600',
+        color: Colors.textPrimary,
         marginBottom: 4,
     },
     emptyText: {
-        fontSize: 13,
-        color: '#6B4226',
-        textAlign: 'center',
+        fontSize: 14,
+        color: '#666',
     },
-
-    // ── Bottom Spacer ──
     bottomSpacer: {
-        height: 32,
+        height: 40,
     },
 });

@@ -1,196 +1,157 @@
+// app/(tabs)/profile.tsx
 import { Colors } from '@/constants/colors';
 import { useUser } from '@/context/UserContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import {
     Alert,
-    Button,
-    Image,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
     const { user, logout } = useUser();
-    const [name, setName] = useState('');
-    const [role, setRole] = useState('');
-    const [imageUri, setImageUri] = useState<string | null>(null);
-
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images, // or .Videos or .All
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-
-        if (!result.canceled && result.assets.length > 0) {
-            setImageUri(result.assets[0].uri);
-            // TODO: Upload image to Supabase storage and update profile `avatar_url`
-        }
-    };
+    const router = useRouter();
 
     const handleSave = async () => {
         if (!user?.id || !user.email) return;
 
         try {
-            const { data: existingProfile, error: fetchError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', user.id)
-                .single();
-
-            const payload = {
-                id: user.id,
-                email: user.email,
-                full_name: name,
-                role,
-            };
-
             const { error: upsertError } = await supabase
                 .from('profiles')
-                .upsert(payload, { onConflict: 'id' });
+                .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
 
             if (upsertError) {
                 Alert.alert('Error', 'Failed to save profile');
             } else {
                 Alert.alert('Success', 'Profile saved successfully');
-                closeEditForm();
             }
         } catch (err) {
             Alert.alert('Error', 'Unexpected error while saving profile');
         }
     };
 
-    const handleAccountSettings = () => {
-        Alert.alert('Account Settings', 'Manage your account settings here');
-    };
-
-    const handleHelpSupport = () => {
-        Alert.alert('Help & Support', 'Contact us for support');
-    };
-
-    const handleAbout = () => {
-        Alert.alert('About', 'Cocoa Farmers App v1.0\nConnecting cocoa farmers across Ghana');
-    };
-
     return (
-        <View style={styles.container}>
-            <TouchableOpacity onPress={pickImage}>
-                {imageUri ? (
-                    <Image source={{ uri: imageUri }} style={styles.avatar} />
-                ) : (
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>Upload Photo</Text>
-                    </View>
-                )}
-            </TouchableOpacity>
+        <LinearGradient colors={['#6A5ACD', '#8A2BE2']} style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                {/* Profile Info */}
+                <View style={styles.profileCard}>
+                    <Text style={styles.label}>Logged in as</Text>
+                    <Text style={styles.email}>{user?.email ?? 'Unknown'}</Text>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                        <Text style={styles.saveText}>Update Profile</Text>
+                    </TouchableOpacity>
+                </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Your Name"
-                placeholderTextColor={Colors.textPrimary}
-                value={name}
-                onChangeText={setName}
-            />
+                {/* Navigation Cards */}
+                <View style={styles.navSection}>
+                    <TouchableOpacity
+                        style={styles.navCard}
+                        onPress={() => router.push('/accountSettings')}
+                    >
+                        <Text style={styles.navTitle}>Account Settings</Text>
+                        <Text style={styles.navSubtitle}>Manage your profile and preferences</Text>
+                    </TouchableOpacity>
 
-            <View style={styles.pickerWrapper}>
-                <Picker
-                    selectedValue={role}
-                    onValueChange={(itemValue: string) => setRole(itemValue)}
-                    style={styles.picker}
-                    dropdownIconColor={Colors.textPrimary}
-                >
-                    <Picker.Item label="Select role..." value="" />
-                    <Picker.Item label="Farmer" value="farmer" />
-                    <Picker.Item label="Fermentary Owner" value="Fermentary Owner" />
-                    <Picker.Item label="Exporter" value="exporter" />
-                    <Picker.Item label="Organization" value="organization" />
-                </Picker>
-            </View>
+                    <TouchableOpacity
+                        style={styles.navCard}
+                        onPress={() => router.push('./help')}
+                    >
+                        <Text style={styles.navTitle}>Help & Support</Text>
+                        <Text style={styles.navSubtitle}>FAQs, contact, and troubleshooting</Text>
+                    </TouchableOpacity>
 
-            <Button title="Save Profile" onPress={handleSave} color={Colors.actionPrimary} />
+                    <TouchableOpacity
+                        style={styles.navCard}
+                        onPress={() => router.push('./about')}
+                    >
+                        <Text style={styles.navTitle}>About This App</Text>
+                        <Text style={styles.navSubtitle}>Version info and outreach mission</Text>
+                    </TouchableOpacity>
+                </View>
 
-            <View style={{ marginTop: 16 }}>
-                <Button title="Logout" onPress={logout} color={Colors.actionPrimary} />
-            </View>
-        </View>
+                {/* Logout */}
+                <View style={styles.logoutSection}>
+                    <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+                        <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
-    safe: {
-        flex: 1,
-        backgroundColor: '#e6eef3',
-    },
-    header: {
-        backgroundColor: '#2ecc71',
-        paddingVertical: 20,
-        paddingHorizontal: 20,
-        alignItems: 'flex-start',
-    },
-    pageTitle: {
-        fontSize: 22,
-        paddingTop: 40,
-        fontWeight: '900',
-        color: '#fff',
-        marginBottom: 4,
-    },
     container: {
-        padding: 16,
-        backgroundColor: Colors.backgroundPrimary,
         flex: 1,
+        padding: 20,
+        justifyContent: 'space-between',
     },
-    avatar: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        alignSelf: 'center',
-        marginBottom: 16,
-    },
-    avatarPlaceholder: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+    profileCard: {
         backgroundColor: Colors.backgroundSecondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        alignSelf: 'center',
-        marginBottom: 16,
-    },
-    avatarText: {
-        color: Colors.textPrimary,
-        fontSize: 14,
-    },
-    input: {
-        backgroundColor: Colors.backgroundSecondary,
-        color: Colors.textPrimary,
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 12,
+        padding: 20,
+        borderRadius: 12,
+        elevation: 3,
+        marginBottom: 20,
     },
     label: {
-        color: Colors.textPrimary,
+        fontSize: 14,
+        color: '#888',
         marginBottom: 4,
-        fontWeight: 'bold',
     },
-    pickerWrapper: {
-        backgroundColor: Colors.backgroundSecondary,
-        borderRadius: 8,
+    email: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.textPrimary,
         marginBottom: 12,
     },
-    picker: {
+    saveButton: {
+        backgroundColor: Colors.actionPrimary,
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    saveText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    navSection: {
+        marginBottom: 20,
+    },
+    navCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 10,
+        marginBottom: 12,
+        elevation: 2,
+    },
+    navTitle: {
+        fontSize: 16,
+        fontWeight: '600',
         color: Colors.textPrimary,
-        paddingHorizontal: 12,
+    },
+    navSubtitle: {
+        fontSize: 13,
+        color: '#666',
+        marginTop: 4,
+    },
+    logoutSection: {
+        alignItems: 'center',
+    },
+    logoutButton: {
+        backgroundColor: '#ff4d4d',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 20,
+    },
+    logoutText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
-function closeEditForm() {
-    throw new Error('Function not implemented.');
-}
-

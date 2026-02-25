@@ -4,14 +4,25 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./*"]
-    }
+      "@services/*": [
+        "services/*"
+      ],
+      "@/*": [
+        "./*"
+      ]
+    },
+    "customConditions": [
+      "react-native"
+    ]
   },
   "include": [
     "**/*.ts",
