@@ -4,15 +4,16 @@ import type { ColorValue, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
 import { Colors } from '../constants/colors';
 
-interface GradientCardProps {
-    colors?: readonly [ColorValue, ColorValue, ...ColorValue[]]; // Optional gradient
+export interface GradientCardProps {
+    colors?: readonly ColorValue[]; // Optional gradient colors array (readonly for tuple compatibility)
     children: React.ReactNode;
     style?: ViewStyle;
     flat?: boolean; // Use flat white background instead of gradient
+    key?: React.Key; // Allow React's key prop (required due to custom JSX runtime declaration)
 }
 
 export const GradientCard: React.FC<GradientCardProps> = ({ colors, children, style, flat = false }) => {
-    if (flat || !colors) {
+    if (flat || !colors || colors.length < 2) {
         return (
             <View style={[styles.card, { backgroundColor: Colors.backgroundSecondary }, style]}>
                 <View style={styles.inner}>{children}</View>
@@ -20,8 +21,11 @@ export const GradientCard: React.FC<GradientCardProps> = ({ colors, children, st
         );
     }
 
+    // Cast to the tuple type required by LinearGradient (safe since we checked length >= 2 above)
+    const gradientColors = colors as readonly [ColorValue, ColorValue, ...ColorValue[]];
+
     return (
-        <LinearGradient colors={colors} style={[styles.card, style]}>
+        <LinearGradient colors={gradientColors} style={[styles.card, style]}>
             <View style={styles.inner}>{children}</View>
         </LinearGradient>
     );

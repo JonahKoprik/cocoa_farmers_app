@@ -1,20 +1,12 @@
 import { Colors } from '@/constants/colors';
 import { supabase } from '@/lib/supabaseClient';
 import NetInfo from '@react-native-community/netinfo';
-import OfflineLoginFallback from 'app/(fallback)/offlineLoginFallback'; // adjust path as needed
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-    Alert,
-    Animated,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import OfflineLoginFallback from '../(fallback)/offlineLoginFallback';
 
 const SignIn = () => {
     const [email, setEmail] = useState('');

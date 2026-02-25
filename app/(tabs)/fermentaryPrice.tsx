@@ -1,6 +1,7 @@
 import { useFermentaries } from '@/hooks/useFermentary';
 import { supabase } from '@/lib/supabaseClient';
 import { Picker } from '@react-native-picker/picker';
+import React from 'react';
 
 import type { Warehouse } from '@/components/types/warehouseType';
 import type { Fermentary } from '@/hooks/useFermentary';
@@ -145,7 +146,7 @@ export default function MarketPricesScreen() {
             >
                 <Picker.Item label="Select LLG" value="" />
                 {llgs.map((llg: LLG, index: number) => (
-                    <Picker.Item key={index} label={llg.llg_name} value={llg.llg_name} />
+                    <Picker.Item testID={`llg-${index}`} label={llg.llg_name} value={llg.llg_name} />
                 ))}
             </Picker>
         </>
@@ -207,7 +208,7 @@ export default function MarketPricesScreen() {
         const displayPrice = type === 'Fermentary' ? item.price_per_kg : item.warehouse_price;
 
         return (
-            <View key={index} style={styles.card}>
+            <View style={styles.card}>
                 <Text style={styles.cardText}>{type} Name: {displayName}</Text>
                 <Text style={styles.cardText}>Contact: {displayContact}</Text>
                 <Text style={styles.cardText}>Owner: {displayOwner}</Text>
@@ -225,14 +226,14 @@ export default function MarketPricesScreen() {
             if (loadingFermentaries) return <Text style={styles.loadingText}>Loading fermentaries...</Text>;
             if (errorFermentaries) return <Text style={styles.errorText}>Error: {errorFermentaries}</Text>;
             if (fermentaries.length === 0) return <Text style={styles.loadingText}>No fermentaries found.</Text>;
-            return fermentaries.map((f: Fermentary, i: number) => renderFacilityCard(f, i, 'Fermentary'));
+            return fermentaries.map((f: Fermentary, i: number) => React.cloneElement(renderFacilityCard(f, i, 'Fermentary'), { key: i }));
         }
 
         if (category === 'Warehouse') {
             if (loadingWarehouses) return <Text style={styles.loadingText}>Loading warehouses...</Text>;
             if (errorWarehouses) return <Text style={styles.errorText}>Error: {errorWarehouses}</Text>;
             if (warehouses.length === 0) return <Text style={styles.loadingText}>No warehouses found.</Text>;
-            return warehouses.map((w: Warehouse, i: number) => renderFacilityCard(w, i, 'Warehouse'));
+            return warehouses.map((w: Warehouse, i: number) => React.cloneElement(renderFacilityCard(w, i, 'Warehouse'), { key: i }));
         }
 
         return null;

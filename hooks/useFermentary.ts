@@ -51,7 +51,7 @@ export function useFermentaries(llgName: string) {
 
       const wardIds = wardData.map((w) => w.ward_id);
 
-      // Step 3: Fetch fermentaries in those wards
+      // Step 3: Fetch fermentaries in those wards using the resolved ward_ids
       const { data: fermentaries, error: fermentaryError } = await supabase
         .from("fermentary")
         .select(
@@ -63,17 +63,15 @@ export function useFermentaries(llgName: string) {
           updated_at,
           ward:ward (
             ward_id,
-            village,
-            llg (
-              name
-            )
+            ward_name,
+            llg_id
           ),
           owner:user_profile (
             full_name
           )
         `,
         )
-        .ilike("ward.llg.name", llgName);
+        .in("ward_id", wardIds);
 
       if (fermentaryError) throw fermentaryError;
 
@@ -87,7 +85,7 @@ export function useFermentaries(llgName: string) {
           contact: f.contact ?? "",
           price_per_kg: typeof f.price_per_kg === "number" ? f.price_per_kg : 0,
           updated_at: f.updated_at ?? new Date().toISOString(),
-          llg_name: f.ward?.llg?.llg_name ?? "",
+          llg_name: trimmedLLG,
         }),
       );
 

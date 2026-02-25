@@ -1,9 +1,8 @@
 import { Colors } from '@/constants/colors';
 import { supabase } from '@/lib/supabaseClient'; // Adjust path if needed
 import { Link, router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Animated } from 'react-native/Libraries/Animated/Animated';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 
 // arrow function 

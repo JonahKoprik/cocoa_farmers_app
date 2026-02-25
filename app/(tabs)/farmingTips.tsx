@@ -70,13 +70,17 @@ export default function FarmingTipsScreen() {
 
             {/* 🟡 Full Tip List */}
             <Text style={styles.heading}>All Farming Tips</Text>
-            <View style={styles.verticalList}>
-                {tips.map((tip, index) => (
-                    <View key={index} style={styles.card}>
-                        <TipCard title={tip.title} content={tip.content} />
+            <FlatList
+                data={tips}
+                keyExtractor={(_item: Tip, index: number) => index.toString()}
+                renderItem={({ item }: { item: Tip }) => (
+                    <View style={styles.card}>
+                        <TipCard title={item.title} content={item.content} />
                     </View>
-                ))}
-            </View>
+                )}
+                scrollEnabled={false}
+                contentContainerStyle={styles.verticalList}
+            />
         </ScrollView>
     );
 }
@@ -85,32 +89,32 @@ const styles = StyleSheet.create({
     safe: {
         flex: 1,
         height: 100,
-        backgroundColor: '#e6eef3',
+        backgroundColor: Colors.backgroundPrimary,
     },
     /* Static header */
     header: {
-        backgroundColor: '#2ecc71', // green header like sign-in
+        backgroundColor: Colors.actionPrimary,
         paddingVertical: 20,
         paddingHorizontal: 20,
-
         alignItems: 'flex-start',
     },
     tabTitle: {
         fontSize: 22,
         paddingTop: 40,
         fontWeight: '900',
-        color: '#fff',
+        color: Colors.backgroundSecondary,
         marginBottom: 4,
     },
     tabSubtitle: {
         fontSize: 13,
-        color: '#f1f7f2',
+        color: Colors.backgroundSecondary,
     },
 
     /* Scrollable content container */
     container: {
         flexGrow: 1,
         paddingVertical: 16,
+        paddingHorizontal: 16,
         backgroundColor: Colors.backgroundPrimary,
     },
 
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
     heading: {
         fontSize: 18,
         fontWeight: '700',
-        color: Colors.textPrimary,
+        color: Colors.backgroundSecondary,
         marginBottom: 12,
     },
 
@@ -186,6 +190,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     toggleTextActive: {
-        color: '#fff',
+        color: Colors.backgroundSecondary,
     },
 });

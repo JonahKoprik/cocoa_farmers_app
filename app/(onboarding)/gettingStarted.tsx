@@ -2,13 +2,13 @@ import CocoaWave from '@/components/CocoaWave';
 import { Colors } from '@/constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text } from 'react-native';
 import {
     Gesture,
     GestureDetector,
     GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import Animated, { FadeInDown, runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GettingStarted() {
@@ -16,7 +16,43 @@ export default function GettingStarted() {
 
     const registerGesture = Gesture.Tap()
         .shouldCancelWhenOutside(true)
-        .onEnd(() => runOnJS(navigateToProfile)());
+        .runOnJS(true)
+        .onEnd(() => navigateToProfile());
+
+    // Fade-in animations using built-in Animated API
+    const titleOpacity = useRef(new Animated.Value(0)).current;
+    const titleTranslateY = useRef(new Animated.Value(30)).current;
+    const buttonOpacity = useRef(new Animated.Value(0)).current;
+    const buttonTranslateY = useRef(new Animated.Value(30)).current;
+
+    useEffect(() => {
+        Animated.sequence([
+            Animated.parallel([
+                Animated.timing(titleOpacity, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(titleTranslateY, {
+                    toValue: 0,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.parallel([
+                Animated.timing(buttonOpacity, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(buttonTranslateY, {
+                    toValue: 0,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start();
+    }, []);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -25,15 +61,19 @@ export default function GettingStarted() {
 
                 <SafeAreaView style={styles.safeArea}>
                     <Animated.Text
-                        entering={FadeInDown.duration(800)}
-                        style={styles.startedText}
+                        style={[
+                            styles.startedText,
+                            { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] },
+                        ]}
                     >
                         Welcome to Cocoa Farmers App
                     </Animated.Text>
 
                     <Animated.View
-                        entering={FadeInDown.delay(300).duration(800)}
-                        style={styles.container}
+                        style={[
+                            styles.container,
+                            { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] },
+                        ]}
                     >
                         <GestureDetector gesture={registerGesture}>
                             <Animated.View style={styles.button}>

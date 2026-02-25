@@ -7,11 +7,11 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
       "@/*": ["./*"]
-    },
-    "types": []
+    }
   },
   "include": [
     "**/*.ts",
@@ -19,5 +19,6 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "types/**/*.d.ts"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
